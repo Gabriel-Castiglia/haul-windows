@@ -1,0 +1,10 @@
+* text=auto eol=lf
+# Third-party files are kept byte for byte as published upstream.
+vendor/** -text
+*.exe binary
+*.png binary
+*.ico binary
+*.pdf binary
+*.gz binary
+*.sig binary
+*.key binary

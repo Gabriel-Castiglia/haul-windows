@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  icono.html: Haul's icon as SVG. It is rendered to a 1024 px PNG with headless Chrome
+  (see the "Icon" section of README.md).
+  Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
+  Date: October 19, 2026
+  SPDX-License-Identifier: GPL-2.0-only
+
+  This program is free software: you can redistribute it and/or modify it under the terms of
+  the GNU General Public License, version 2, as published by the Free Software Foundation.
+  It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
+-->
+<html><head><meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; }
+  svg { display: block; }
+</style></head>
+<body>
+<!-- 1024 × 1024 canvas following the macOS icon grid: 824 px body, centered.
+     Palette: graphite background and the system accent green; change the stop-color values for another accent. -->
+<svg width="512" height="512" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3A4048"/>
+      <stop offset="0.55" stop-color="#23272D"/>
+      <stop offset="1" stop-color="#121417"/>
+    </linearGradient>
+    <radialGradient id="brillo" cx="0.3" cy="0.15" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.16"/>
+      <stop offset="0.55" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="disco" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4BD873"/>
+      <stop offset="1" stop-color="#1E8E45"/>
+    </linearGradient>
+    <linearGradient id="flecha" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4F5E9"/>
+    </linearGradient>
+    <filter id="sombra" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="sombraChica" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="forma"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+
+  <g filter="url(#sombra)">
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#fondo)"/>
+  </g>
+  <g clip-path="url(#forma)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#brillo)"/>
+    <!-- Decorative rings -->
+    <circle cx="512" cy="470" r="330" fill="none" stroke="#4BD873" stroke-opacity="0.10" stroke-width="22"/>
+    <circle cx="512" cy="470" r="400" fill="none" stroke="#4BD873" stroke-opacity="0.06" stroke-width="22"/>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184" fill="none" stroke="#fff" stroke-opacity="0.12" stroke-width="3"/>
+
+  <!-- Disc with the play symbol -->
+  <g filter="url(#sombraChica)">
+    <circle cx="512" cy="436" r="216" fill="url(#disco)"/>
+  </g>
+  <path transform="translate(512 436) scale(0.94) translate(-526 -450)" d="M462 352 Q448 344 448 360 L448 540 Q448 556 462 548 L612 462 Q626 450 612 438 Z"
+        fill="url(#flecha)"/>
+
+  <!-- Download arrow over the tray -->
+  <g filter="url(#sombraChica)" fill="none" stroke="#E9EDF1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 700 L512 780" stroke-width="44"/>
+    <path d="M462 742 L512 792 L562 742" stroke-width="44"/>
+    <path d="M330 790 L330 820 Q330 842 352 842 L672 842 Q694 842 694 820 L694 790" stroke-width="36"/>
+  </g>
+</svg>
+</body></html>

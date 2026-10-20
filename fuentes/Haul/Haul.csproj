@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Haul.csproj
+    Haul for Windows: a graphical front end for yt-dlp.
+
+    Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
+    Date: October 20, 2026
+    SPDX-License-Identifier: GPL-2.0-only
+
+    This program is free software: you can redistribute it and/or modify it under the terms of
+    the GNU General Public License, version 2, as published by the Free Software Foundation.
+    It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
+
+    Build and installation: see README.md.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!-- Required by the source-generated P/Invoke declarations (LibraryImport). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Haul</RootNamespace>
+    <AssemblyName>Haul</AssemblyName>
+    <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.1.0</Version>
+    <Product>Haul</Product>
+    <Company>Gabriel Castiglia</Company>
+    <Authors>Gabriel Castiglia</Authors>
+    <Copyright>Copyright (C) 2026 Gabriel Castiglia. GPL-2.0-only.</Copyright>
+    <Description>Graphical front end for yt-dlp</Description>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- Application.ThemeMode (the Windows 11 Fluent theme) is still flagged as experimental. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+    <!-- The bundled yt-dlp version is read from vendor/yt-dlp/VERSION and stored in the assembly. -->
+    <YtDlpVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\vendor\yt-dlp\VERSION').Trim())</YtDlpVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="YtDlpVersion" Value="$(YtDlpVersion)" />
+    <Resource Include="..\..\icono\icono-256.png" Link="Recursos\icono-256.png" />
+    <None Include="..\..\vendor\yt-dlp\yt-dlp.exe" Link="yt-dlp.exe"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\vendor\yt-dlp\licenses\*" Link="licenses\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\LICENSE" Link="licenses\Haul-LICENSE"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
