@@ -29,6 +29,8 @@
     <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.1.0</Version>
+    <!-- Plain "1.1.0" in Settings > Apps, without the git commit the SDK appends by default. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Haul</Product>
     <Company>Gabriel Castiglia</Company>
     <Authors>Gabriel Castiglia</Authors>
