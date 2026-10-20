@@ -42,6 +42,11 @@ public sealed partial class Cola : Observable
     private Elemento? actual;
     private readonly Dictionary<Elemento, Process> lecturas = [];
     private readonly HashSet<Elemento> canceladas = [];
+    // Rows waiting two seconds before their next attempt.
+    private readonly Dictionary<Elemento, DispatcherTimer> esperas = [];
+    // Finished downloads already removed from the list while the queue still has work, so the
+    // summary keeps counting them.
+    private int limpias;
     private uint ultimoPortapapeles;
     private readonly StringBuilder registro = new();
 
@@ -52,6 +57,8 @@ public sealed partial class Cola : Observable
         var guardada = Ajustes.Datos.Carpeta;
         destino = guardada != null && Directory.Exists(guardada) ? guardada : CarpetaDescargas();
         formato = Formatos.Desde(Ajustes.Datos.Formato);
+        limpiarSola = Ajustes.Datos.LimpiarSola;
+        instrumentales = Ajustes.Datos.Instrumentales;
         Loc.Cambio += () => { AvisarTodo(); foreach (var e in Elementos) e.AvisarTodo(); };
     }
 
@@ -96,6 +103,36 @@ public sealed partial class Cola : Observable
         set { destino = value; Ajustes.Datos.Carpeta = value; Ajustes.Guardar(); Avisar(); Avisar(nameof(NombreDestino)); }
     }
 
+    private bool limpiarSola;
+    // When on, every download that finishes leaves the list by itself. Turning it on also clears
+    // what had already finished.
+    public bool LimpiarSola
+    {
+        get => limpiarSola;
+        set
+        {
+            limpiarSola = value; Ajustes.Datos.LimpiarSola = value; Ajustes.Guardar(); Avisar();
+            if (value) LimpiarTerminados();
+        }
+    }
+
+    private bool instrumentales;
+    // When off, videos with "instrumental" in the title wait in the queue, paused.
+    public bool Instrumentales
+    {
+        get => instrumentales;
+        set
+        {
+            instrumentales = value; Ajustes.Datos.Instrumentales = value; Ajustes.Guardar(); Avisar();
+            foreach (var e in Elementos.Where(x => x.Instrumental && !x.Forzar))
+            {
+                if (value && e.Etapa == Etapa.Pausada) e.Etapa = Etapa.EnCola;
+                else if (!value && e.Etapa == Etapa.EnCola) e.Etapa = Etapa.Pausada;
+            }
+            Siguiente();
+        }
+    }
+
     public string NombreDestino =>
         string.Equals(destino.TrimEnd('\\'), CarpetaDescargas().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)
             ? tr("Descargas", "Downloads") : Path.GetFileName(destino.TrimEnd('\\')) is { Length: > 0 } n ? n : destino;
@@ -113,12 +150,14 @@ public sealed partial class Cola : Observable
     {
         get
         {
-            var hechas = Elementos.Count(e => e.Etapa == Etapa.Lista);
+            var hechas = Elementos.Count(e => e.Etapa == Etapa.Lista) + limpias;
             var fallos = Elementos.Count(e => e.Etapa == Etapa.Fallo);
+            var pausadas = Elementos.Count(e => e.Etapa == Etapa.Pausada);
             // A playlist still being read is not counted yet; one that failed is.
-            var total = Elementos.Count(e => !(e.EsLectura && e.Activa));
+            var total = Elementos.Count(e => !(e.EsLectura && e.Activa)) + limpias;
             var t = tr($"{hechas} de {total} listas", $"{hechas} of {total} done");
             if (fallos > 0) t += " · " + tr($"{fallos} con error", $"{fallos} failed");
+            if (pausadas > 0) t += " · " + tr($"{pausadas} en pausa", $"{pausadas} paused");
             return t;
         }
     }
@@ -267,6 +306,7 @@ public sealed partial class Cola : Observable
 
     private void Sumar(Elemento e, int? posicion = null)
     {
+        if (Elementos.Count == 0) limpias = 0;
         e.CambioDeEtapa = Refrescar;
         if (posicion is int i && i <= Elementos.Count) Elementos.Insert(i, e); else Elementos.Add(e);
         Refrescar();
@@ -281,29 +321,75 @@ public sealed partial class Cola : Observable
 
     public void Cancelar(Elemento e)
     {
-        if (lecturas.TryGetValue(e, out var p)) { canceladas.Add(e); Matar(p); }
+        if (esperas.Remove(e, out var t)) { t.Stop(); Detener(e); }
+        else if (lecturas.TryGetValue(e, out var p)) { canceladas.Add(e); Matar(p); }
         else if (e == actual && proceso != null) { canceladas.Add(e); Matar(proceso); }
         else if (e.Etapa == Etapa.EnCola) e.Etapa = Etapa.Cancelada;
     }
 
     public void CancelarTodo()
     {
-        foreach (var e in Elementos.Where(x => x.Etapa == Etapa.EnCola)) e.Etapa = Etapa.Cancelada;
+        foreach (var e in Elementos.Where(x => x.Etapa is Etapa.EnCola or Etapa.Pausada)) e.Etapa = Etapa.Cancelada;
+        foreach (var (e, t) in esperas.ToList()) { t.Stop(); esperas.Remove(e); Detener(e); }
         foreach (var (e, p) in lecturas.ToList()) { canceladas.Add(e); Matar(p); }
         if (actual != null && proceso != null) { canceladas.Add(actual); Matar(proceso); }
     }
 
+    // Pressed by the user: on a paused instrumental it means "download it anyway".
     public void Reintentar(Elemento e)
     {
-        if (e.EsLectura) { e.Reiniciar(); Leer(e, yaEnLaCola: true); return; }
+        if (e.Etapa == Etapa.Pausada) e.Forzar = true;
         e.Reiniciar();
+        if (e.EsLectura) { Leer(e, yaEnLaCola: true); return; }
         Siguiente();
     }
 
     public void LimpiarTerminados()
     {
-        foreach (var e in Elementos.Where(x => x.Terminada).ToList()) Elementos.Remove(e);
+        var terminados = Elementos.Where(x => x.Terminada).ToList();
+        bool quedaTrabajo = Elementos.Any(x => !x.Terminada);
+        limpias = quedaTrabajo ? limpias + terminados.Count(x => x.Etapa == Etapa.Lista) : 0;
+        foreach (var e in terminados) Elementos.Remove(e);
         Refrescar();
+    }
+
+    // With automatic clearing on, a finished or cancelled row leaves the list; failed ones stay.
+    private void Despedir(Elemento e)
+    {
+        if (!limpiarSola || e.Etapa is not (Etapa.Lista or Etapa.Cancelada)) return;
+        if (e.Etapa == Etapa.Lista) limpias++;
+        Elementos.Remove(e);
+        Refrescar();
+    }
+
+    // A failed attempt is repeated after two seconds, up to Elemento.MaxReintentos times. A
+    // download keeps its place as the current one meanwhile, so the order of the queue is kept.
+    private void Reprogramar(Elemento e, Action volver)
+    {
+        e.Reintentos++;
+        e.Etapa = Etapa.Esperando;
+        var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        t.Tick += (_, _) =>
+        {
+            t.Stop();
+            if (!esperas.Remove(e)) return;
+            e.Reiniciar(automatico: true);
+            volver();
+        };
+        esperas[e] = t;
+        t.Start();
+        Refrescar();
+    }
+
+    // Stops a row that was waiting for its next attempt.
+    private void Detener(Elemento e)
+    {
+        bool eraActual = e == actual;
+        if (eraActual) actual = null;
+        e.BorrarRestos();
+        e.Etapa = Etapa.Cancelada;
+        Despedir(e);
+        if (eraActual) Siguiente();
     }
 
     // yt-dlp starts ffmpeg as a child process, so the whole tree is stopped.
@@ -320,12 +406,23 @@ public sealed partial class Cola : Observable
         if (actual != null) return;
         var e = Elementos.FirstOrDefault(x => x.Etapa == Etapa.EnCola && !x.EsLectura);
         if (e == null) { Refrescar(); return; }
+        Iniciar(e);
+    }
 
+    private void Iniciar(Elemento e)
+    {
         try { Directory.CreateDirectory(e.Destino); }
-        catch (Exception ex) { e.Fallar(tr("No se pudo crear la carpeta: ", "Could not create the folder: ") + ex.Message); Siguiente(); return; }
+        catch (Exception ex)
+        {
+            actual = null;
+            e.Fallar(tr("No se pudo crear la carpeta: ", "Could not create the folder: ") + ex.Message);
+            Siguiente();
+            return;
+        }
 
         var plantilla = e.Prefijo != null ? $"{e.Prefijo} - %(title)s.%(ext)s" : "%(title)s.%(ext)s";
         // Output is requested in a custom, tab-separated format:
+        //   META     id, channel, uploader, title and thumbnail, before the match filter (-O pre_process)
         //   INFO     video metadata and file name, before downloading (-O before_dl)
         //   AVANCE   percentage, speed and time remaining (--progress-template)
         //   ARCHIVO  final path, after merging or converting (-O after_move)
@@ -333,9 +430,11 @@ public sealed partial class Cola : Observable
         {
             "--newline", "--color", "no_color", "--no-playlist", "--encoding", "utf-8",
             "-o", plantilla,
+            "--match-filters", Filtro.Expresion(instrumentales || e.Forzar),
             "--no-simulate", "--progress",
             "--progress-template",
             "download:AVANCE\t%(progress._percent_str)s\t%(progress._speed_str)s\t%(progress._eta_str)s",
+            "-O", "pre_process:META\t%(id)s\t%(channel)s\t%(channel_id)s\t%(uploader)s\t%(uploader_id)s\t%(title)s\t%(thumbnail)s",
             "-O", "before_dl:INFO\t%(title)s\t%(uploader)s\t%(duration)s\t%(thumbnail)s\t%(filename)s",
             "-O", "after_move:ARCHIVO\t%(filepath)s",
         }).ToList();
@@ -377,12 +476,22 @@ public sealed partial class Cola : Observable
         ui.BeginInvoke(DispatcherPriority.Background, () =>
         {
             proceso = null;
+            bool fallo = !canceladas.Contains(e) && !e.Descartado && (codigo != 0 || e.Fallo != "");
+            if (fallo && e.Reintentos < Elemento.MaxReintentos)
+            {
+                Reprogramar(e, () => Iniciar(e));
+                return;
+            }
             actual = null;
-            if (canceladas.Remove(e)) { e.BorrarRestos(); e.Etapa = Etapa.Cancelada; }
-            else if (codigo == 0) e.Terminar();
+            if (canceladas.Remove(e)) { e.BorrarRestos(); e.Etapa = Etapa.Cancelada; Despedir(e); }
+            else if (e.Descartado) { e.BorrarRestos(); Elementos.Remove(e); Refrescar(); }
+            // The match filter held it back: an instrumental, while instrumentals are off.
+            else if (codigo == 0 && e.Archivo == null && e.Instrumental && !instrumentales && !e.Forzar) e.Etapa = Etapa.Pausada;
+            else if (codigo == 0 && e.Fallo == "") { e.Terminar(); e.BorrarIntermedios(); Despedir(e); }
             else if (e.Etapa != Etapa.Fallo)
-                e.Fallar(tr($"yt-dlp terminó con el código {codigo}. El detalle está en «Detalles técnicos».",
-                            $"yt-dlp exited with code {codigo}. See \"Technical details\" for more."));
+                e.Fallar(e.Fallo != "" ? e.Fallo
+                    : tr($"yt-dlp terminó con el código {codigo}. El detalle está en «Detalles técnicos».",
+                         $"yt-dlp exited with code {codigo}. See \"Technical details\" for more."));
             Siguiente();
         });
     }
@@ -436,6 +545,11 @@ public sealed partial class Cola : Observable
 
         if (codigo != 0)
         {
+            if (fila.Reintentos < Elemento.MaxReintentos)
+            {
+                Reprogramar(fila, () => Leer(fila, yaEnLaCola: true));
+                return;
+            }
             var linea = error.Split('\n').LastOrDefault(l => l.StartsWith("ERROR:"));
             fila.Fallar(linea != null ? Errores.Mensaje(linea) : tr($"yt-dlp terminó con el código {codigo}.", $"yt-dlp exited with code {codigo}."));
             Refrescar();
@@ -459,6 +573,9 @@ public sealed partial class Cola : Observable
             nombre = Cadena(raiz, "title") ?? "";
             foreach (var v in entradas.EnumerateArray())
             {
+                if (Filtro.Descartado(Cadena(v, "id"), Cadena(v, "title"), Cadena(v, "channel"), Cadena(v, "channel_id"),
+                                      Cadena(v, "uploader"), Cadena(v, "uploader_id")))
+                    continue;
                 var enlace = Cadena(v, "url") ?? Cadena(v, "webpage_url");
                 if (enlace == null && Cadena(v, "id") is { } id) enlace = "https://www.youtube.com/watch?v=" + id;
                 if (enlace == null) continue;
@@ -510,6 +627,8 @@ public sealed partial class Cola : Observable
                 Posicion = $"{i + 1}/{videos.Count}",
             };
             e.FijarInfo(titulo, autor, duracion, miniatura);
+            e.Instrumental = Filtro.EsInstrumental(titulo);
+            if (e.Instrumental && !instrumentales) e.Etapa = Etapa.Pausada;
             Sumar(e, lugar < 0 ? null : lugar + i);
         }
         Siguiente();

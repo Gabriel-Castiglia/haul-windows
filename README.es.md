@@ -1,6 +1,6 @@
 # Haul para Windows
 
-Gabriel Castiglia · 20 de octubre de 2026 · versión 1.1.0 · licencia GPL-2.0 · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 21 de octubre de 2026 · versión 1.2.0 · licencia GPL-2.0 · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 
@@ -67,6 +67,20 @@ o canceladas se pueden reintentar o quitar. Una descarga cancelada borra los arc
 había creado; los que ya estaban en la carpeta, como una descarga anterior del mismo video en otro
 formato, no se tocan nunca. La salida completa de yt-dlp está en «Detalles técnicos».
 
+Una descarga que falla se reintenta hasta cuatro veces, con dos segundos entre cada intento, y la fila
+muestra qué intento está en curso («Reintento 2/4»). Los archivos a medias se conservan entre intentos,
+así yt-dlp sigue desde donde quedó. Cuando una descarga termina, la aplicación borra además los
+archivos intermedios que yt-dlp no pudo quitar, como el audio original de un MP3 mientras un cliente
+de sincronización de archivos lo tenía abierto.
+
+«Limpiar terminadas» es un interruptor. Mientras está activado, cada descarga que termina o se cancela
+sale sola de la lista y el resumen la sigue contando; las que fallaron quedan, para poder reintentarlas.
+Al activarlo también se limpia lo que ya había terminado. La aplicación recuerda la elección.
+
+Los videos con «instrumental» en el título esperan en la cola, en pausa, salvo que esté marcada
+«Descargar instrumentales». Una fila en pausa se puede bajar sola con su botón de descarga, y al
+marcar la opción se reanudan todas.
+
 El botón ⓘ de la ventana muestra la versión, qué significa el nombre, el autor, la licencia y el
 enlace a este repositorio, en el idioma de la interfaz.
 
@@ -124,7 +138,8 @@ parte del repositorio.
 ## Ventana y tema
 
 La ventana no se puede achicar por debajo de 560 × 560, así que su contenido siempre se lee; por
-debajo de esa altura el contenido se desplaza. El tamaño y la posición se recuerdan entre sesiones.
+debajo de esa altura el contenido se desplaza,
+mientras el encabezado queda fijo arriba. El tamaño y la posición se recuerdan entre sesiones.
 La aplicación usa el tema Fluent de Windows 11: sigue el modo claro y el oscuro, y el color de énfasis
 de Configuración > Personalización > Colores, también si cambian con la aplicación abierta.
 
@@ -150,7 +165,8 @@ Los errores más comunes de yt-dlp se muestran en palabras simples en el idioma 
 no disponible, video privado, sitio no soportado, lista inexistente, sin conexión); el resto aparece
 tal como lo escribe yt-dlp.
 
-Las preferencias (idioma, carpeta, formato, tamaño de la ventana) se guardan en
+Las preferencias (idioma, carpeta, formato, tamaño de la ventana, «Limpiar terminadas» y
+«Descargar instrumentales») se guardan en
 `%APPDATA%\Haul\settings.json`. Borrar ese archivo las devuelve a su valor inicial.
 
 ## Notas técnicas
@@ -163,9 +179,13 @@ formato propio, separado por tabulaciones, igual que la versión de macOS:
 
 | Línea | Contenido | Origen |
 |---|---|---|
+| `META` | id, canal, autor, título y miniatura, que se revisan antes de bajar | `-O pre_process:…` |
 | `INFO` | título, autor, duración, miniatura y nombre del archivo | `-O before_dl:…` |
 | `AVANCE` | porcentaje, velocidad y tiempo restante | `--progress-template` |
 | `ARCHIVO` | ruta final del archivo | `-O after_move:…` |
+
+Los instrumentales en pausa se frenan con `--match-filters`, así yt-dlp no baja nada hasta que se
+permiten.
 
 Las listas se leen con `--flat-playlist -J`, que enumera los videos sin descargarlos. Cancelar detiene
 yt-dlp junto con ffmpeg (todo el árbol de procesos). Con `-O`, yt-dlp no imprime nada más, así que los

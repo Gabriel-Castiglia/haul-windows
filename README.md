@@ -1,6 +1,6 @@
 # Haul for Windows
 
-Gabriel Castiglia · October 20, 2026 · version 1.1.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · October 21, 2026 · version 1.2.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
 
 English · [Español](README.es.md)
 
@@ -67,6 +67,20 @@ or removed. A cancelled download deletes the partial files it had created; files
 in the folder, such as an earlier download of the same video in another format, are never touched.
 The full yt-dlp output is under "Technical details".
 
+A download that fails is tried again up to four times, two seconds apart, and the row shows which
+attempt is running ("Retry 2/4"). Partial files are kept between attempts, so yt-dlp resumes where
+it stopped. When a download finishes, the app also deletes the intermediate files yt-dlp could not
+remove by itself, such as the original audio of an MP3 while a file sync client held it
+open.
+
+"Clear finished" is a switch. While it is on, every download that finishes or is cancelled leaves the
+list by itself, and the summary keeps counting it; failed ones stay, so they can be retried. Turning
+it on also clears what had already finished. The app remembers the setting.
+
+Videos with "instrumental" in the title wait in the queue, paused, unless "Download instrumentals" is
+checked. A paused row can be downloaded on its own with its download button, and checking the option
+resumes all of them.
+
 The ⓘ button in the window shows the version, the meaning of the name, the author, the license and
 the link to this repository, in the interface language.
 
@@ -123,7 +137,7 @@ the repository.
 ## Window and theme
 
 The window cannot be made smaller than 560 × 560, so its contents always stay readable; below that
-height the content scrolls. Size and position are remembered between sessions. The app uses the
+height the content scrolls, while the header stays fixed at the top. Size and position are remembered between sessions. The app uses the
 Windows 11 Fluent theme: it follows light and dark mode, and the accent color in Settings >
 Personalization > Colors, also when they change while it is open.
 
@@ -149,7 +163,8 @@ The most common yt-dlp errors are shown in plain words in the interface language
 unavailable, private video, unsupported site, missing playlist, no connection); anything else
 appears exactly as yt-dlp prints it.
 
-Preferences (language, folder, format, window size) are stored in `%APPDATA%\Haul\settings.json`.
+Preferences (language, folder, format, window size, "Clear finished" and "Download instrumentals")
+are stored in `%APPDATA%\Haul\settings.json`.
 Deleting that file resets them.
 
 ## Technical notes
@@ -162,9 +177,13 @@ tab-separated format, the same as the macOS version:
 
 | Line | Contents | Source |
 |---|---|---|
+| `META` | id, channel, uploader, title and thumbnail, checked before downloading | `-O pre_process:…` |
 | `INFO` | title, uploader, duration, thumbnail and file name | `-O before_dl:…` |
 | `AVANCE` | percentage, speed and time remaining | `--progress-template` |
 | `ARCHIVO` | final file path | `-O after_move:…` |
+
+Paused instrumentals are held back with `--match-filters`, so yt-dlp downloads nothing until they
+are allowed.
 
 Playlists are read with `--flat-playlist -J`, which lists the videos without downloading them.
 Cancelling stops yt-dlp together with ffmpeg (the whole process tree). With `-O`, yt-dlp prints

@@ -20,7 +20,8 @@ using static Haul.Core.Loc;
 
 namespace Haul.Core;
 
-public enum Etapa { EnCola, Leyendo, Preparando, Bajando, Procesando, Lista, Cancelada, Fallo }
+// Esperando: a failed attempt waits before the next retry. Pausada: an instrumental held back.
+public enum Etapa { EnCola, Leyendo, Preparando, Bajando, Procesando, Esperando, Lista, Cancelada, Fallo, Pausada }
 
 public abstract class Observable : INotifyPropertyChanged
 {
@@ -69,6 +70,16 @@ public sealed class Elemento : Observable
     public string Fallo { get; private set; } = "";
     public void Fallar(string mensaje) { Fallo = mensaje; Etapa = Etapa.Fallo; }
 
+    // A failed download or playlist read is tried again this many times, two seconds apart.
+    public const int MaxReintentos = 4;
+    public int Reintentos { get; set; }
+
+    // Set from the metadata yt-dlp prints before downloading (or from the playlist entry).
+    public bool Instrumental { get; set; }
+    public bool Descartado { get; private set; }
+    // The user asked for this instrumental anyway.
+    public bool Forzar { get; set; }
+
     private string? titulo, autor, duracion;
     private string? miniatura;
     private ImageSource? imagen;
@@ -96,10 +107,16 @@ public sealed class Elemento : Observable
     private string? baseArchivo;
     private HashSet<string> previos = new(StringComparer.OrdinalIgnoreCase);
 
-    public void Reiniciar()
+    // A retry pressed by the user starts over; an automatic one keeps the partial files, which
+    // yt-dlp resumes, and the list of files that existed before the first attempt.
+    public void Reiniciar(bool automatico = false)
     {
-        baseArchivo = null;
-        previos.Clear();
+        if (!automatico)
+        {
+            baseArchivo = null;
+            previos.Clear();
+            Reintentos = 0;
+        }
         Fallo = "";
         Progreso = 0;
         velocidad = restante = "";
@@ -132,11 +149,22 @@ public sealed class Elemento : Observable
                 restante = Errores.Limpio(c[3]);
                 AvisarTodo();
                 break;
+            case "META" when c.Length >= 7:
+                FijarInfo(c[6], c[2] != "NA" ? c[2] : c[4], null, c.Length >= 8 ? c[7] : null);
+                Instrumental = Filtro.EsInstrumental(c[6]);
+                Descartado = Filtro.Descartado(c[1], c[6], c[2], c[3], c[4], c[5]);
+                break;
             case "ARCHIVO" when c.Length >= 2:
                 Archivo = c[1].Trim();
                 break;
             default:
-                if (linea.StartsWith("ERROR:")) Fallar(Errores.Mensaje(linea));
+                // With retries left, the error is kept but the row does not turn red: the queue
+                // decides when yt-dlp exits whether to try again.
+                if (linea.StartsWith("ERROR:"))
+                {
+                    if (Reintentos < MaxReintentos) { Fallo = Errores.Mensaje(linea); AvisarTodo(); }
+                    else Fallar(Errores.Mensaje(linea));
+                }
                 break;
         }
     }
@@ -146,8 +174,10 @@ public sealed class Elemento : Observable
     private void Anotar(string nombre)
     {
         var p = System.IO.Path.IsPathRooted(nombre) ? nombre : System.IO.Path.Combine(Destino, nombre);
-        baseArchivo = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(p) ?? Destino,
-                                             System.IO.Path.GetFileNameWithoutExtension(p));
+        var b = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(p) ?? Destino,
+                                       System.IO.Path.GetFileNameWithoutExtension(p));
+        if (string.Equals(b, baseArchivo, StringComparison.OrdinalIgnoreCase)) return;   // a retry of the same file
+        baseArchivo = b;
         previos = new HashSet<string>(Archivos(), StringComparer.OrdinalIgnoreCase);
     }
 
@@ -176,23 +206,45 @@ public sealed class Elemento : Observable
         baseArchivo = null;
     }
 
+    // After a successful download, removes what yt-dlp could not delete by itself, such as the
+    // original audio after converting to MP3 while a file sync client held it
+    // open. The final file and files that existed before are kept; a locked file is tried again.
+    public async void BorrarIntermedios()
+    {
+        if (Archivo == null || baseArchivo == null) return;
+        var final = System.IO.Path.GetFullPath(Archivo);
+        for (int intento = 0; intento < 5; intento++)
+        {
+            var quedan = Archivos().Where(f => !previos.Contains(f)
+                                               && !string.Equals(System.IO.Path.GetFullPath(f), final, StringComparison.OrdinalIgnoreCase))
+                                   .ToList();
+            if (quedan.Count == 0) return;
+            foreach (var f in quedan)
+            {
+                try { System.IO.File.Delete(f); } catch { /* still open: next round */ }
+            }
+            await Task.Delay(3000);
+        }
+    }
+
     // ---- Values shown by the row ----
 
     public string Titulo => titulo ?? Enlace;
     public ImageSource? Imagen => imagen;
     public bool SinImagen => imagen == null;
 
-    public bool Activa => etapa is Etapa.Leyendo or Etapa.Preparando or Etapa.Bajando or Etapa.Procesando;
+    public bool Activa => etapa is Etapa.Leyendo or Etapa.Preparando or Etapa.Bajando or Etapa.Procesando or Etapa.Esperando;
     public bool Terminada => etapa is Etapa.Lista or Etapa.Cancelada or Etapa.Fallo;
 
     public bool MostrarBarra => etapa is Etapa.Bajando or Etapa.Procesando;
-    public bool MostrarEspera => etapa is Etapa.Preparando or Etapa.Leyendo;
+    public bool MostrarEspera => etapa is Etapa.Preparando or Etapa.Leyendo or Etapa.Esperando;
     public bool EsError => etapa == Etapa.Fallo;
-    public double Opacidad => etapa == Etapa.Cancelada ? 0.5 : 1;
+    public double Opacidad => etapa switch { Etapa.Cancelada => 0.5, Etapa.Pausada => 0.6, _ => 1 };
 
-    public bool PuedeQuitar => etapa is Etapa.EnCola or Etapa.Cancelada or Etapa.Fallo;
+    public bool PuedeQuitar => etapa is Etapa.EnCola or Etapa.Cancelada or Etapa.Fallo or Etapa.Pausada;
     public bool PuedeCancelar => Activa;
-    public bool PuedeReintentar => etapa is Etapa.Cancelada or Etapa.Fallo;
+    public bool PuedeReintentar => etapa is Etapa.Cancelada or Etapa.Fallo or Etapa.Pausada;
+    public string IconoReintentar => etapa == Etapa.Pausada ? "\uE896" : "\uE72C";
     public bool PuedeAbrir => etapa == Etapa.Lista && Archivo != null;
     public bool ListoSinArchivo => etapa == Etapa.Lista && Archivo == null;
 
@@ -200,7 +252,8 @@ public sealed class Elemento : Observable
                                                        : tr("Sacar de la lista", "Remove from list");
     public string AyudaCancelar => etapa == Etapa.Leyendo ? tr("Dejar de leer la lista", "Stop reading the playlist")
                                                           : tr("Cancelar esta descarga", "Cancel this download");
-    public string AyudaReintentar => tr("Probar de nuevo", "Try again");
+    public string AyudaReintentar => etapa == Etapa.Pausada ? tr("Descargar igual", "Download anyway")
+                                                            : tr("Probar de nuevo", "Try again");
     public string AyudaMostrar => tr("Mostrar en el Explorador", "Show in File Explorer");
     public string AyudaAbrir => tr("Abrir", "Open");
 
@@ -212,25 +265,33 @@ public sealed class Elemento : Observable
     {
         get
         {
+            // While retrying, the attempt is shown first: "Retry 2/4 · 37 % · …".
+            var intento = Reintentos > 0 ? tr($"Reintento {Reintentos}/{MaxReintentos}", $"Retry {Reintentos}/{MaxReintentos}") + " · " : "";
             switch (etapa)
             {
                 case Etapa.EnCola: return tr("En cola", "Queued") + " · " + Formatos.Titulo(Formato);
-                case Etapa.Leyendo: return tr("Leyendo la lista…", "Reading the playlist…");
-                case Etapa.Preparando: return tr("Preparando…", "Preparing…");
+                case Etapa.Leyendo: return intento + tr("Leyendo la lista…", "Reading the playlist…");
+                case Etapa.Preparando: return intento + tr("Preparando…", "Preparing…");
+                case Etapa.Esperando:
+                    return tr($"Falló; reintento {Reintentos} de {MaxReintentos} en 2 s…",
+                              $"Failed; retry {Reintentos} of {MaxReintentos} in 2 s…");
+                case Etapa.Pausada: return tr("En pausa: es un instrumental", "Paused: it is an instrumental");
                 case Etapa.Procesando:
-                    return Formato == Formato.Audio ? tr("Convirtiendo a MP3…", "Converting to MP3…")
-                                                    : tr("Uniendo imagen y sonido…", "Merging picture and sound…");
+                    return intento + (Formato == Formato.Audio ? tr("Convirtiendo a MP3…", "Converting to MP3…")
+                                                               : tr("Uniendo imagen y sonido…", "Merging picture and sound…"));
                 case Etapa.Bajando:
                     var partes = new List<string> { $"{(int)(Progreso * 100)} %" };
                     if (velocidad != "") partes.Add(velocidad);
                     if (restante != "") partes.Add(tr($"quedan {restante}", $"{restante} left"));
                     if (Formato == Formato.Video && parte > 1) partes.Add(tr("sonido", "sound"));
-                    return string.Join(" · ", partes);
+                    return intento + string.Join(" · ", partes);
                 case Etapa.Lista:
                     var datos = new[] { autor, duracion }.Where(x => !string.IsNullOrEmpty(x));
                     return datos.Any() ? string.Join(" · ", datos) : tr("Listo", "Done");
                 case Etapa.Cancelada: return tr("Cancelada", "Cancelled");
-                default: return Errores.Traducir(Fallo);
+                default:
+                    return Errores.Traducir(Fallo)
+                           + (Reintentos > 0 ? tr($" · {Reintentos} reintentos", $" · {Reintentos} retries") : "");
             }
         }
     }

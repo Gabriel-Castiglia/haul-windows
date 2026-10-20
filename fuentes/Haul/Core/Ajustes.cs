@@ -60,6 +60,8 @@ public static class Ajustes
         public double? Ancho { get; set; }
         public double? Alto { get; set; }
         public bool Maximizada { get; set; }
+        public bool LimpiarSola { get; set; }
+        public bool Instrumentales { get; set; }
     }
 
     public static readonly string Carpeta =
