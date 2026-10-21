@@ -82,7 +82,7 @@ public partial class MainWindow : Window
 
     private void AplicarTextos()
     {
-        Lema.Text = tr("Videos y música de YouTube y casi cualquier sitio", "Video and music from YouTube and almost any site");
+        Lema.Text = tr("Una interfaz para yt-dlp", "A front end for yt-dlp");
         SelectorIdioma.SelectedIndex = Actual == Idioma.Es ? 1 : 0;
         SelectorIdioma.ToolTip = tr("Idioma", "Language");
         BotonAcercaDe.ToolTip = tr("Acerca de Haul", "About Haul");

@@ -54,10 +54,10 @@ public sealed class AcercaDe : Window
         panel.Children.Add(Titulo(tr("El nombre", "The name")));
         panel.Children.Add(Parrafo(tr(
             "«Haul» es una palabra inglesa: quiere decir acarrear algo pesado y también la carga que uno se trae de "
-            + "vuelta, como la pesca de un día. Eso hace la app: se trae a casa videos y música de YouTube y de casi "
-            + "cualquier sitio.",
+            + "vuelta, como la pesca de un día. Eso hace la app, con yt-dlp de motor: se trae "
+            + "la carga a casa.",
             "To haul is to carry something heavy, and a haul is the load you bring back, like a day's catch. That is "
-            + "what the app does: it brings video and music home from YouTube and almost any other site.")));
+            + "what the app does: with yt-dlp as its engine, it brings the load home.")));
 
         panel.Children.Add(Titulo(tr("Autor", "Author")));
         panel.Children.Add(Parrafo("Gabriel Castiglia · © 2026"));

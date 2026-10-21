@@ -61,7 +61,7 @@ $shell = New-Object -ComObject WScript.Shell
 $lnk = $shell.CreateShortcut($Acceso)
 $lnk.TargetPath = Join-Path $Destino 'Haul.exe'
 $lnk.WorkingDirectory = $Destino
-$lnk.Description = 'Video and music from YouTube and almost any site'
+$lnk.Description = 'A front end for yt-dlp'
 $lnk.Save()
 
 # Entry in Settings > Apps > Installed apps, with its uninstaller.
