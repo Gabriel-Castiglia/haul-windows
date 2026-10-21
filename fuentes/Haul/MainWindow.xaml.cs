@@ -103,9 +103,9 @@ public partial class MainWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(SelectorIdioma, tr("Idioma", "Language"));
         TituloCola.Text = tr("Cola", "Queue");
         BotonCancelarTodo.Content = tr("Cancelar todo", "Cancel all");
-        BotonLimpiar.Content = tr("Limpiar terminadas", "Clear finished");
-        BotonLimpiar.ToolTip = tr("Activado, cada descarga terminada sale sola de la lista",
-                                  "When on, every finished download leaves the list by itself");
+        OpcionLimpiar.Content = tr("Limpiar terminadas automáticamente", "Clear finished automatically");
+        OpcionLimpiar.ToolTip = tr("Activado, cada descarga terminada sale sola de la lista",
+                                   "When on, every finished download leaves the list by itself");
         OpcionInstrumentales.Content = tr("Descargar instrumentales", "Download instrumentals");
         OpcionInstrumentales.ToolTip = tr("Desactivado, los videos con «instrumental» en el título esperan en pausa",
                                           "When off, videos with \"instrumental\" in the title wait, paused");

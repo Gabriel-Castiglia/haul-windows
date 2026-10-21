@@ -1,6 +1,6 @@
 # Haul for Windows
 
-Gabriel Castiglia · October 21, 2026 · version 1.2.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · October 21, 2026 · version 1.2.1 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
 
 English · [Español](README.es.md)
 
@@ -58,7 +58,8 @@ touched; preferences are kept unless `-Preferencias` is added.
 2. Choose the format: Video (MP4) or Audio only (MP3).
 3. Choose the destination folder. The first time it is Downloads; after that the app keeps the
    last folder chosen, and the format too.
-4. Press Download or Ctrl+Enter.
+4. Press Download or Ctrl+Enter. The box empties when the download starts, and a link already in the
+   queue is not picked up again from the clipboard.
 
 Links go into a queue and are downloaded one at a time. More links can be added while the queue
 runs. Each row shows the thumbnail, title, percentage, speed and time remaining, and once finished
@@ -73,9 +74,10 @@ it stopped. When a download finishes, the app also deletes the intermediate file
 remove by itself, such as the original audio of an MP3 while a file sync client held it
 open.
 
-"Clear finished" is a switch. While it is on, every download that finishes or is cancelled leaves the
-list by itself, and the summary keeps counting it; failed ones stay, so they can be retried. Turning
-it on also clears what had already finished. The app remembers the setting.
+The "Clear finished automatically" checkbox, below the format, is always in view, even with an
+empty queue. While it is checked, every download that finishes or is cancelled leaves the
+list by itself, and the summary keeps counting it; failed ones stay, so they can be retried. Checking
+it also clears what had already finished. The app remembers the setting.
 
 Videos with "instrumental" in the title wait in the queue, paused, unless "Download instrumentals" is
 checked. A paused row can be downloaded on its own with its download button, and checking the option
@@ -163,7 +165,7 @@ The most common yt-dlp errors are shown in plain words in the interface language
 unavailable, private video, unsupported site, missing playlist, no connection); anything else
 appears exactly as yt-dlp prints it.
 
-Preferences (language, folder, format, window size, "Clear finished" and "Download instrumentals")
+Preferences (language, folder, format, window size, "Clear finished automatically" and "Download instrumentals")
 are stored in `%APPDATA%\Haul\settings.json`.
 Deleting that file resets them.
 

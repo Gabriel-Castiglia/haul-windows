@@ -131,7 +131,9 @@
                         </StackPanel>
                     </RadioButton>
                 </UniformGrid>
-                <CheckBox x:Name="OpcionInstrumentales" Margin="2,0,0,14" IsChecked="{Binding Instrumentales}" />
+                <CheckBox x:Name="OpcionInstrumentales" Margin="2,0,0,6" IsChecked="{Binding Instrumentales}" />
+                <!-- Kept out of the queue section, which hides itself once the list is empty -->
+                <CheckBox x:Name="OpcionLimpiar" Margin="2,0,0,14" IsChecked="{Binding LimpiarSola}" />
 
                 <!-- Destination -->
                 <Border Style="{StaticResource Tarjeta}" Margin="0,0,0,18">
@@ -205,9 +207,6 @@
                         <TextBlock x:Name="TituloCola" DockPanel.Dock="Left" FontSize="15" FontWeight="SemiBold" />
                         <TextBlock DockPanel.Dock="Left" Margin="10,2,0,0" Style="{StaticResource TextoSecundario}"
                                    FontSize="13" Text="{Binding Resumen}" />
-                        <!-- A switch: while pressed, finished downloads leave the list by themselves -->
-                        <ToggleButton x:Name="BotonLimpiar" DockPanel.Dock="Right" Padding="10,3" Margin="8,0,0,0"
-                                      IsChecked="{Binding LimpiarSola}" />
                         <Button x:Name="BotonCancelarTodo" DockPanel.Dock="Right" Padding="10,3"
                                 Click="CancelarTodo_Click"
                                 Visibility="{Binding Ocupada, Converter={StaticResource BoolAVisible}}" />

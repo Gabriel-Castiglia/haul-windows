@@ -207,7 +207,8 @@ public sealed partial class Cola : Observable
     // ---- Clipboard ----
 
     // Adds the links found on the clipboard. In automatic mode it only acts when the field is
-    // empty and the clipboard changed since the last read, so processed links are not re-added.
+    // empty and the clipboard changed since the last read, and it skips links already in the
+    // queue, so processed links are not re-added.
     public void TomarDelPortapapeles(bool forzar = false)
     {
         uint numero = GetClipboardSequenceNumber();
@@ -217,6 +218,7 @@ public sealed partial class Cola : Observable
         try { contenido = Clipboard.ContainsText() ? Clipboard.GetText() : ""; }
         catch (COMException) { return; }   // another program holds the clipboard open
         var yaEstan = Detectados.ToHashSet();
+        if (!forzar) yaEstan.UnionWith(Elementos.Select(x => x.Enlace));
         var nuevos = Enlaces.En(contenido).Where(x => !yaEstan.Contains(x)).ToList();
         if (nuevos.Count == 0) return;
         Texto = (texto.Length == 0 || texto.EndsWith('\n') ? texto : texto + "\n") + string.Join("\n", nuevos) + "\n";
@@ -229,6 +231,8 @@ public sealed partial class Cola : Observable
         var nuevos = Detectados;
         if (nuevos.Count == 0) return;
         Texto = "";
+        // The clipboard that held these links counts as read, so it is not pasted back in.
+        ultimoPortapapeles = GetClipboardSequenceNumber();
         foreach (var enlace in nuevos) pendientes.Enqueue(enlace);
         ProcesarPendientes();
     }
