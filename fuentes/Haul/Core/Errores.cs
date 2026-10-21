@@ -64,8 +64,8 @@ public static class Errores
                                            "The page could not be opened; check the connection."),
             ("Requested format is not available", "Ese formato no está disponible para este video.",
                                                   "That format is not available for this video."),
-            ("Sign in to confirm you", "YouTube pide verificar que no sos un robot: instalá la versión más nueva de Haul.",
-                                       "YouTube asks to confirm you are not a bot; install the latest version of Haul."),
+            ("Sign in to confirm you", "El sitio pide verificar que no sos un robot: instalá la versión más nueva de Haul.",
+                                       "The site asks to confirm you are not a bot; install the latest version of Haul."),
             ("does not have a videos tab", "Ese canal no tiene videos para bajar.", "That channel has no videos to download."),
             ("The playlist does not exist", "La lista no existe o es privada.", "The playlist does not exist or is private."),
         ];

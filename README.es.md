@@ -94,26 +94,23 @@ También se puede iniciar con enlaces desde una terminal o un acceso directo:
 
 ## Listas de reproducción
 
-Un enlace a una lista de YouTube (`youtube.com/playlist?list=…`) o a la página de un canal
-(`youtube.com/@nombre`) se lee primero, sin descargar nada, y cada video pasa a ser una fila propia de
+Un enlace a una lista o a la página de un canal se lee primero, sin descargar nada, y cada video pasa a ser una fila propia de
 la cola, con su miniatura y su posición («Mix · 3/12»). Los archivos van a una subcarpeta con el nombre
 de la lista y se numeran en el orden de la lista: `01 - Título.mp4`, `02 - Título.mp4`, etcétera. Cada
 video se puede cancelar o reintentar por separado. Una lista de más de 200 videos pide confirmación
 antes de entrar a la cola.
 
-Un enlace a un video abierto desde una lista (`watch?v=…&list=…`) muestra en la ventana una tarjeta
-que pregunta si se baja solo ese video o la lista entera. Los enlaces de otros sitios se descargan tal
-cual, un video cada uno.
+Un enlace a un video abierto desde una lista muestra en la ventana una tarjeta
+que pregunta si se baja solo ese video o la lista entera. Los demás enlaces se descargan tal cual, un video cada uno.
 
 ## Formatos
 
 | Formato | Resultado | Opciones de yt-dlp |
 |---|---|---|
-| Video | MP4 con H.264 y AAC, máximo 1080p en YouTube | `-f bv*+ba/b -S vcodec:h264,res,acodec:aac --merge-output-format mp4` |
+| Video | MP4 con H.264 y AAC, a la mayor resolución disponible en H.264 | `-f bv*+ba/b -S vcodec:h264,res,acodec:aac --merge-output-format mp4` |
 | Solo audio | MP3 a la máxima calidad | `-x --audio-format mp3 --audio-quality 0` |
 
-Se prefiere H.264 porque cualquier reproductor de Windows lo abre; sin esa preferencia YouTube entrega
-AV1 con audio Opus. Los archivos llevan el título del video como nombre.
+Se prefiere H.264 porque cualquier reproductor de Windows lo abre. Los archivos llevan el título del video como nombre.
 
 ## Estructura del repositorio
 
@@ -149,8 +146,7 @@ de Configuración > Personalización > Colores, también si cambian con la aplic
 
 Haul está hecho y probado con yt-dlp 2026.08.19, y esa copia exacta viene con la aplicación. Una
 versión fija mantiene el comportamiento estable y no depende de que el repositorio de yt-dlp siga en
-línea. La contracara es que YouTube cambia seguido, y tarde o temprano una versión fija deja de
-funcionar con él. Cuando eso pase, una versión nueva de Haul pasa a un yt-dlp más nuevo:
+línea. La contracara es que los sitios cambian seguido, y tarde o temprano una versión fija deja de funcionar con ellos. Cuando eso pase, una versión nueva de Haul pasa a un yt-dlp más nuevo:
 
 ```
 powershell -ExecutionPolicy Bypass -File scripts\actualizar-yt-dlp.ps1 <versión>
@@ -202,11 +198,11 @@ Haul es una interfaz; el trabajo pesado es de estos proyectos:
 |---|---|---|
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp), de los colaboradores de yt-dlp, derivado de youtube-dl | Motor de descarga, incluido en `vendor/yt-dlp` | [Unlicense](https://github.com/yt-dlp/yt-dlp/blob/master/LICENSE) |
 | Componentes dentro de `yt-dlp.exe`: Python, OpenSSL, curl, curl_cffi, certifi, mutagen, websockets, brotli y otros | Entorno y bibliotecas del ejecutable de Windows | Las suyas, listadas en `vendor/yt-dlp/licenses/yt-dlp-exe-THIRD_PARTY_LICENSES.txt` |
-| [yt-dlp-ejs](https://github.com/yt-dlp/ejs), incluido en yt-dlp | Resuelve los desafíos JavaScript de YouTube | Unlicense |
+| [yt-dlp-ejs](https://github.com/yt-dlp/ejs), incluido en yt-dlp | Resuelve desafíos de JavaScript | Unlicense |
 | [meriyah](https://github.com/meriyah/meriyah), de KFlash y otros, dentro de yt-dlp-ejs | Analizador de JavaScript | [ISC](https://github.com/meriyah/meriyah/blob/main/LICENSE.md) |
 | [astring](https://github.com/davidbonnet/astring), de David Bonnet, dentro de yt-dlp-ejs | Generador de código JavaScript | [MIT](https://github.com/davidbonnet/astring/blob/main/LICENSE) |
 | [FFmpeg](https://ffmpeg.org), compilado por el proyecto yt-dlp, instalado con winget, no incluido | Une imagen y sonido, convierte a MP3 | [GPL-3.0+](https://ffmpeg.org/legal.html) en esta compilación |
-| [Deno](https://deno.com), instalado con winget | Entorno JavaScript que yt-dlp usa para YouTube | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
+| [Deno](https://deno.com), instalado con winget | Entorno JavaScript que usa yt-dlp | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
 | [.NET](https://dotnet.microsoft.com) y WPF, instalados con winget | Entorno de ejecución e interfaz gráfica | [MIT](https://github.com/dotnet/wpf/blob/main/LICENSE.TXT) |
 | [Segoe Fluent Icons](https://learn.microsoft.com/windows/apps/design/style/segoe-fluent-icons-font), parte de Windows | Íconos de la interfaz | Licencia de Windows |
 | [pandoc](https://pandoc.org), solo para armar los manuales en PDF | Conversión de Markdown a HTML | [GPL-2.0+](https://github.com/jgm/pandoc/blob/main/COPYRIGHT) |

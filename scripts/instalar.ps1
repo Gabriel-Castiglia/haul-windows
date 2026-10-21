@@ -14,7 +14,7 @@
 # Dependencies it manages (through winget):
 #   Microsoft.DotNet.SDK.10   builds the app (and brings the .NET Desktop Runtime it runs on)
 #   yt-dlp.FFmpeg             merges picture and sound, and converts to MP3
-#   DenoLand.Deno             JavaScript runtime that yt-dlp needs for full YouTube support
+#   DenoLand.Deno             JavaScript runtime that yt-dlp needs to solve JavaScript challenges
 # If they are already installed, they are upgraded to the latest version.
 #
 # The app goes to %LOCALAPPDATA%\Programs\Haul, with a Start menu shortcut and an entry in
