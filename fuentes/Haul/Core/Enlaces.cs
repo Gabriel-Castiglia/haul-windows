@@ -58,12 +58,14 @@ public static partial class Enlaces
         return s;
     }
 
-    // Classifies a link. Only YouTube is inspected: links to other sites download as they are,
-    // one video each, as in version 1.0.
+    // Classifies a link. Only YouTube and Substack tag pages are inspected: links to other sites
+    // download as they are, one video each, as in version 1.0.
     public static Clase Clasificar(string enlace)
     {
         if (!Uri.TryCreate(enlace, UriKind.Absolute, out var u)) return Clase.Video;
         var host = u.Host.ToLowerInvariant();
+        // A Substack tag page (/t/<tag>) lists posts; the plugin reads it as a playlist.
+        if (host.EndsWith(".substack.com") && u.AbsolutePath.StartsWith("/t/")) return Clase.Lista;
         bool youtube = host == "youtu.be" || host == "youtube.com" || host.EndsWith(".youtube.com");
         if (!youtube) return Clase.Video;
 

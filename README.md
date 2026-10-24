@@ -1,6 +1,6 @@
 # Haul for Windows
 
-Gabriel Castiglia · October 21, 2026 · version 1.2.1 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · October 24, 2026 · version 1.3.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
 
 English · [Español](README.es.md)
 
@@ -103,6 +103,9 @@ cancelled or retried on its own. A playlist with more than 200 videos asks for c
 A link to a video that was opened from a playlist shows a card in the window that
 asks whether to download only that video or the whole playlist. Other links download as they are, one video each.
 
+Some tag pages that group several posts, each with an embedded video, are read the same way: one
+row per post, from the oldest to the newest, so a series keeps its episode order.
+
 ## Formats
 
 | Format | Result | yt-dlp options |
@@ -126,6 +129,7 @@ H.264 is preferred because every Windows player handles it. Files are named afte
 | `scripts/actualizar-yt-dlp.ps1` | Replaces the bundled yt-dlp with another verified release |
 | `scripts/extraer_licencias.py` | Reads the third-party licenses stored inside `yt-dlp.exe` |
 | `scripts/manual.ps1` | Builds the PDF manuals from the READMEs (pandoc and Edge, Chrome or Brave) |
+| `plugins/haul/` | Haul's own yt-dlp extractor plugin, for links the bundled version does not handle |
 | `vendor/yt-dlp/` | Bundled copy of yt-dlp 2026.08.19, with sources, checksums, signature and licenses |
 | `docs/Haul-manual-en.pdf`, `docs/Haul-manual-es.pdf` | PDF manuals, in English and Spanish |
 | `docs/manual.css` | Stylesheet for the manuals |
@@ -138,8 +142,8 @@ the repository.
 
 The window cannot be made smaller than 560 × 560, so its contents always stay readable; below that
 height the content scrolls, while the header stays fixed at the top. Size and position are remembered between sessions. The app uses the
-Windows 11 Fluent theme: it follows light and dark mode, and the accent color in Settings >
-Personalization > Colors, also when they change while it is open.
+Windows 11 Fluent theme, always in dark mode whatever the system setting, with the accent color in
+Settings > Personalization > Colors, also when it changes while the app is open.
 
 ## Maintenance
 
@@ -184,6 +188,13 @@ tab-separated format, the same as the macOS version:
 
 Paused instrumentals are held back with `--match-filters`, so yt-dlp downloads nothing until they
 are allowed.
+
+Some links fail inside yt-dlp itself, its latest release included: a video page that now asks for an
+account although its embedded player does not, and pages whose data moved to a different place.
+Haul ships a yt-dlp extractor plugin of its own in `plugins/haul/`, installed in a `plugins` folder
+next to `yt-dlp.exe` and passed with `--plugin-dirs`. Plugin extractors are tried before the
+built-in ones, and each one only matches the links it fixes. When the embedded player answers with
+an occasional 401 error, the plugin retries up to three times.
 
 Playlists are read with `--flat-playlist -J`, which lists the videos without downloading them.
 Cancelling stops yt-dlp together with ffmpeg (the whole process tree). With `-O`, yt-dlp prints

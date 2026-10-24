@@ -28,7 +28,7 @@
     <AssemblyName>Haul</AssemblyName>
     <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <!-- Plain "1.1.0" in Settings > Apps, without the git commit the SDK appends by default. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Haul</Product>
@@ -49,6 +49,8 @@
     <None Include="..\..\vendor\yt-dlp\yt-dlp.exe" Link="yt-dlp.exe"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\vendor\yt-dlp\licenses\*" Link="licenses\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\plugins\**\*.py" Link="plugins\%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="..\..\LICENSE" Link="licenses\Haul-LICENSE"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

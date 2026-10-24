@@ -4,3 +4,4 @@ obj/
 .DS_Store
 *.user
 .vs/
+__pycache__/

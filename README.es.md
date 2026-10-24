@@ -1,6 +1,6 @@
 # Haul para Windows
 
-Gabriel Castiglia · 21 de octubre de 2026 · versión 1.2.1 · licencia GPL-2.0 · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 24 de octubre de 2026 · versión 1.3.0 · licencia GPL-2.0 · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 
@@ -103,6 +103,10 @@ antes de entrar a la cola.
 Un enlace a un video abierto desde una lista muestra en la ventana una tarjeta
 que pregunta si se baja solo ese video o la lista entera. Los demás enlaces se descargan tal cual, un video cada uno.
 
+Algunas páginas de etiqueta que agrupan varias publicaciones, cada una con un video embebido, se leen
+igual: una fila por publicación, de la más vieja a la más nueva, así una serie conserva el orden de
+sus episodios.
+
 ## Formatos
 
 | Formato | Resultado | Opciones de yt-dlp |
@@ -126,6 +130,7 @@ Se prefiere H.264 porque cualquier reproductor de Windows lo abre. Los archivos 
 | `scripts/actualizar-yt-dlp.ps1` | Reemplaza el yt-dlp incluido por otra versión verificada |
 | `scripts/extraer_licencias.py` | Lee las licencias de terceros guardadas dentro de `yt-dlp.exe` |
 | `scripts/manual.ps1` | Arma los manuales en PDF a partir de los README (pandoc y Edge, Chrome o Brave) |
+| `plugins/haul/` | Complemento de extractores propio de Haul para yt-dlp, para enlaces que la versión incluida no maneja |
 | `vendor/yt-dlp/` | Copia incluida de yt-dlp 2026.08.19, con fuentes, sumas, firma y licencias |
 | `docs/Haul-manual-en.pdf`, `docs/Haul-manual-es.pdf` | Manuales en PDF, en inglés y en castellano |
 | `docs/manual.css` | Hoja de estilo de los manuales |
@@ -139,8 +144,9 @@ parte del repositorio.
 La ventana no se puede achicar por debajo de 560 × 560, así que su contenido siempre se lee; por
 debajo de esa altura el contenido se desplaza,
 mientras el encabezado queda fijo arriba. El tamaño y la posición se recuerdan entre sesiones.
-La aplicación usa el tema Fluent de Windows 11: sigue el modo claro y el oscuro, y el color de énfasis
-de Configuración > Personalización > Colores, también si cambian con la aplicación abierta.
+La aplicación usa el tema Fluent de Windows 11, siempre en modo oscuro aunque el sistema esté en
+claro, con el color de énfasis de Configuración > Personalización > Colores, también si cambia con la
+aplicación abierta.
 
 ## Mantenimiento
 
@@ -184,6 +190,14 @@ formato propio, separado por tabulaciones, igual que la versión de macOS:
 
 Los instrumentales en pausa se frenan con `--match-filters`, así yt-dlp no baja nada hasta que se
 permiten.
+
+Algunos enlaces fallan dentro del propio yt-dlp, incluso en su última versión: una página de video
+que ahora pide una cuenta aunque su reproductor embebido no la pide, y páginas cuyos datos se
+mudaron de lugar. Haul trae un complemento de extractores propio en `plugins/haul/`, que se instala
+en una carpeta `plugins` junto a `yt-dlp.exe` y se pasa con `--plugin-dirs`. Los extractores de un
+complemento se prueban antes que los incluidos en yt-dlp, y cada uno solo toma los enlaces que
+arregla. Cuando el reproductor embebido responde con un error 401 esporádico, el complemento
+reintenta hasta tres veces.
 
 Las listas se leen con `--flat-playlist -J`, que enumera los videos sin descargarlos. Cancelar detiene
 yt-dlp junto con ffmpeg (todo el árbol de procesos). Con `-O`, yt-dlp no imprime nada más, así que los

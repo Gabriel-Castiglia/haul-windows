@@ -23,6 +23,9 @@ public static class Herramientas
 {
     // yt-dlp ships next to Haul.exe, pinned to the version it was tested with.
     public static readonly string RutaYtDlp = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
+    // Haul's yt-dlp extractor plugin (plugins\haul in the repository), for links the pinned
+    // version does not handle on its own.
+    public static readonly string RutaComplementos = Path.Combine(AppContext.BaseDirectory, "plugins");
 
     public static readonly string VersionYtDlp =
         typeof(Herramientas).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -97,6 +100,7 @@ public static class Herramientas
         psi.Environment["PATH"] = RutasDeBusqueda;
         psi.Environment["PYTHONUTF8"] = "1";
         psi.Environment["PYTHONIOENCODING"] = "utf-8";
+        psi.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
         foreach (var a in argumentos) psi.ArgumentList.Add(a);
         return psi;
     }

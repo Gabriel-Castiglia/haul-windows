@@ -432,6 +432,7 @@ public sealed partial class Cola : Observable
         //   ARCHIVO  final path, after merging or converting (-O after_move)
         var args = Formatos.Argumentos(e.Formato).Concat(new[]
         {
+            "--plugin-dirs", Herramientas.RutaComplementos,
             "--newline", "--color", "no_color", "--no-playlist", "--encoding", "utf-8",
             "-o", plantilla,
             "--match-filters", Filtro.Expresion(instrumentales || e.Forzar),
@@ -511,7 +512,8 @@ public sealed partial class Cola : Observable
         fila.FijarInfo(null, null, null, null);
         fila.Etapa = Etapa.Leyendo;
 
-        var args = new List<string> { "--flat-playlist", "--yes-playlist", "-J", "--no-warnings", "--encoding", "utf-8",
+        var args = new List<string> { "--plugin-dirs", Herramientas.RutaComplementos,
+                                      "--flat-playlist", "--yes-playlist", "-J", "--no-warnings", "--encoding", "utf-8",
                                       "--", fila.Enlace };
         var p = new Process { StartInfo = Herramientas.Preparar(args), EnableRaisingEvents = true };
         var salida = new StringBuilder();
