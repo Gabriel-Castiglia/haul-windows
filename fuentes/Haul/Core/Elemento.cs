@@ -21,7 +21,8 @@ using static Haul.Core.Loc;
 namespace Haul.Core;
 
 // Esperando: a failed attempt waits before the next retry. Pausada: an instrumental held back.
-public enum Etapa { EnCola, Leyendo, Preparando, Bajando, Procesando, Esperando, Lista, Cancelada, Fallo, Pausada }
+// Detenida: paused by the user; its partial files are kept so the download resumes.
+public enum Etapa { EnCola, Leyendo, Preparando, Bajando, Procesando, Esperando, Lista, Cancelada, Fallo, Pausada, Detenida }
 
 public abstract class Observable : INotifyPropertyChanged
 {
@@ -123,6 +124,15 @@ public sealed class Elemento : Observable
         parte = 1;
         Archivo = null;
         Etapa = Etapa.EnCola;
+    }
+
+    // A pause keeps the progress, the partial files and the list of files that existed before,
+    // so resuming continues where it stopped and cancelling still removes only what it created.
+    public void Pausar(Etapa nueva)
+    {
+        Fallo = "";
+        velocidad = restante = "";
+        Etapa = nueva;
     }
 
     // Reads one line of yt-dlp output, printed in the custom format requested by the queue.
@@ -239,10 +249,12 @@ public sealed class Elemento : Observable
     public bool MostrarBarra => etapa is Etapa.Bajando or Etapa.Procesando;
     public bool MostrarEspera => etapa is Etapa.Preparando or Etapa.Leyendo or Etapa.Esperando;
     public bool EsError => etapa == Etapa.Fallo;
-    public double Opacidad => etapa switch { Etapa.Cancelada => 0.5, Etapa.Pausada => 0.6, _ => 1 };
+    public double Opacidad => etapa switch { Etapa.Cancelada => 0.5, Etapa.Pausada or Etapa.Detenida => 0.6, _ => 1 };
 
-    public bool PuedeQuitar => etapa is Etapa.EnCola or Etapa.Cancelada or Etapa.Fallo or Etapa.Pausada;
+    public bool PuedeQuitar => etapa is Etapa.EnCola or Etapa.Cancelada or Etapa.Fallo or Etapa.Pausada or Etapa.Detenida;
     public bool PuedeCancelar => Activa;
+    public bool PuedePausar => !EsLectura && etapa is Etapa.EnCola or Etapa.Preparando or Etapa.Bajando or Etapa.Procesando or Etapa.Esperando;
+    public bool PuedeReanudar => etapa == Etapa.Detenida;
     public bool PuedeReintentar => etapa is Etapa.Cancelada or Etapa.Fallo or Etapa.Pausada;
     public string IconoReintentar => etapa == Etapa.Pausada ? "\uE896" : "\uE72C";
     public bool PuedeAbrir => etapa == Etapa.Lista && Archivo != null;
@@ -254,6 +266,8 @@ public sealed class Elemento : Observable
                                                           : tr("Cancelar esta descarga", "Cancel this download");
     public string AyudaReintentar => etapa == Etapa.Pausada ? tr("Descargar igual", "Download anyway")
                                                             : tr("Probar de nuevo", "Try again");
+    public string AyudaPausar => tr("Pausar", "Pause");
+    public string AyudaReanudar => tr("Seguir", "Resume");
     public string AyudaMostrar => tr("Mostrar en el Explorador", "Show in File Explorer");
     public string AyudaAbrir => tr("Abrir", "Open");
 
@@ -276,6 +290,7 @@ public sealed class Elemento : Observable
                     return tr($"Falló; reintento {Reintentos} de {MaxReintentos} en 2 s…",
                               $"Failed; retry {Reintentos} of {MaxReintentos} in 2 s…");
                 case Etapa.Pausada: return tr("En pausa: es un instrumental", "Paused: it is an instrumental");
+                case Etapa.Detenida: return tr("En pausa", "Paused") + (Progreso > 0 ? $" · {(int)(Progreso * 100)} %" : "");
                 case Etapa.Procesando:
                     return intento + (Formato == Formato.Audio ? tr("Convirtiendo a MP3…", "Converting to MP3…")
                                                                : tr("Uniendo imagen y sonido…", "Merging picture and sound…"));

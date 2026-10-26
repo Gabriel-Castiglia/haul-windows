@@ -62,6 +62,7 @@ public static class Ajustes
         public bool Maximizada { get; set; }
         public bool LimpiarSola { get; set; }
         public bool Instrumentales { get; set; }
+        public bool ListaEntera { get; set; } = true;
     }
 
     public static readonly string Carpeta =

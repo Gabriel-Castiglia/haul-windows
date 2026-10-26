@@ -42,13 +42,14 @@ public sealed partial class Cola : Observable
     private Elemento? actual;
     private readonly Dictionary<Elemento, Process> lecturas = [];
     private readonly HashSet<Elemento> canceladas = [];
+    // Rows whose process was stopped by a pause, with the stage they go back to.
+    private readonly Dictionary<Elemento, Etapa> pausando = [];
     // Rows waiting two seconds before their next attempt.
     private readonly Dictionary<Elemento, DispatcherTimer> esperas = [];
     // Finished downloads already removed from the list while the queue still has work, so the
     // summary keeps counting them.
     private int limpias;
     private uint ultimoPortapapeles;
-    private readonly StringBuilder registro = new();
 
     public Cola()
     {
@@ -59,6 +60,7 @@ public sealed partial class Cola : Observable
         formato = Formatos.Desde(Ajustes.Datos.Formato);
         limpiarSola = Ajustes.Datos.LimpiarSola;
         instrumentales = Ajustes.Datos.Instrumentales;
+        listaEntera = Ajustes.Datos.ListaEntera;
         Loc.Cambio += () => { AvisarTodo(); foreach (var e in Elementos) e.AvisarTodo(); };
     }
 
@@ -133,6 +135,24 @@ public sealed partial class Cola : Observable
         }
     }
 
+    private bool listaEntera;
+    // When on, a video opened from a playlist brings the whole playlist without asking; when
+    // off, the window asks every time.
+    public bool ListaEntera
+    {
+        get => listaEntera;
+        set { listaEntera = value; Ajustes.Datos.ListaEntera = value; Ajustes.Guardar(); Avisar(); }
+    }
+
+    // While the whole queue is paused nothing new starts; the download that was running goes
+    // back to the queue with its partial files and resumes first.
+    private bool enPausa;
+    public bool EnPausa
+    {
+        get => enPausa;
+        private set { enPausa = value; Refrescar(); }
+    }
+
     public string NombreDestino =>
         string.Equals(destino.TrimEnd('\\'), CarpetaDescargas().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)
             ? tr("Descargas", "Downloads") : Path.GetFileName(destino.TrimEnd('\\')) is { Length: > 0 } n ? n : destino;
@@ -142,9 +162,11 @@ public sealed partial class Cola : Observable
     public bool HayTerminados => Elementos.Any(e => e.Terminada);
     public bool HayElementos => Elementos.Count > 0;
     public bool PuedeDescargar => Detectados.Count > 0 && Herramientas.YtDlpPresente;
-
-    public string Registro => registro.ToString();
-    public bool HayRegistro => registro.Length > 0;
+    public bool HayFallos => Elementos.Any(e => e.Etapa == Etapa.Fallo);
+    // Buttons of the queue header: pause or resume the whole queue, cancel everything.
+    public bool MostrarPausarTodo => !enPausa && (actual != null || Elementos.Any(e => e.Etapa == Etapa.EnCola && !e.EsLectura));
+    public bool MostrarSeguirTodo => enPausa;
+    public bool MostrarCancelarTodo => Ocupada || enPausa;
 
     public string Resumen
     {
@@ -152,7 +174,7 @@ public sealed partial class Cola : Observable
         {
             var hechas = Elementos.Count(e => e.Etapa == Etapa.Lista) + limpias;
             var fallos = Elementos.Count(e => e.Etapa == Etapa.Fallo);
-            var pausadas = Elementos.Count(e => e.Etapa == Etapa.Pausada);
+            var pausadas = Elementos.Count(e => e.Etapa is Etapa.Pausada or Etapa.Detenida);
             // A playlist still being read is not counted yet; one that failed is.
             var total = Elementos.Count(e => !(e.EsLectura && e.Activa)) + limpias;
             var t = tr($"{hechas} de {total} listas", $"{hechas} of {total} done");
@@ -191,17 +213,9 @@ public sealed partial class Cola : Observable
     private void Refrescar()
     {
         foreach (var p in new[] { nameof(Ocupada), nameof(HayTerminados), nameof(HayElementos), nameof(Resumen),
-                                  nameof(TituloDelBoton) })
+                                  nameof(TituloDelBoton), nameof(HayFallos), nameof(EnPausa), nameof(MostrarPausarTodo),
+                                  nameof(MostrarSeguirTodo), nameof(MostrarCancelarTodo) })
             Avisar(p);
-    }
-
-    private void Anotar(string linea)
-    {
-        registro.Append(linea).Append('\n');
-        // Keeps the technical log to a reasonable size during long playlists.
-        if (registro.Length > 400_000) registro.Remove(0, registro.Length - 300_000);
-        Avisar(nameof(Registro));
-        Avisar(nameof(HayRegistro));
     }
 
     // ---- Clipboard ----
@@ -246,7 +260,10 @@ public sealed partial class Cola : Observable
             switch (Enlaces.Clasificar(enlace))
             {
                 case Clase.Lista: Leer(new Elemento(enlace, formato, destino) { EsLectura = true, ListaEntera = true }); break;
-                case Clase.VideoEnLista: preguntaLista = enlace; AvisarPregunta(); break;
+                case Clase.VideoEnLista:
+                    if (listaEntera) Leer(new Elemento(enlace, formato, destino) { EsLectura = true, ListaEntera = true });
+                    else { preguntaLista = enlace; AvisarPregunta(); }
+                    break;
                 default: Sumar(new Elemento(enlace, formato, destino)); break;
             }
         }
@@ -319,6 +336,9 @@ public sealed partial class Cola : Observable
     public void Quitar(Elemento e)
     {
         if (e.Activa) return;
+        // A paused download leaves no partial files behind; a queued one may have some from a
+        // whole-queue pause.
+        if (e.Etapa is Etapa.Detenida or Etapa.EnCola) e.BorrarRestos();
         Elementos.Remove(e);
         Refrescar();
     }
@@ -328,12 +348,15 @@ public sealed partial class Cola : Observable
         if (esperas.Remove(e, out var t)) { t.Stop(); Detener(e); }
         else if (lecturas.TryGetValue(e, out var p)) { canceladas.Add(e); Matar(p); }
         else if (e == actual && proceso != null) { canceladas.Add(e); Matar(proceso); }
-        else if (e.Etapa == Etapa.EnCola) e.Etapa = Etapa.Cancelada;
+        else if (e.Etapa is Etapa.Detenida or Etapa.EnCola) { e.BorrarRestos(); e.Etapa = Etapa.Cancelada; Despedir(e); }
     }
 
     public void CancelarTodo()
     {
-        foreach (var e in Elementos.Where(x => x.Etapa is Etapa.EnCola or Etapa.Pausada)) e.Etapa = Etapa.Cancelada;
+        EnPausa = false;
+        foreach (var e in Elementos.Where(x => x.Etapa is Etapa.Detenida or Etapa.EnCola)) e.BorrarRestos();
+        foreach (var e in Elementos.Where(x => x.Etapa is Etapa.EnCola or Etapa.Pausada or Etapa.Detenida).ToList())
+            e.Etapa = Etapa.Cancelada;
         foreach (var (e, t) in esperas.ToList()) { t.Stop(); esperas.Remove(e); Detener(e); }
         foreach (var (e, p) in lecturas.ToList()) { canceladas.Add(e); Matar(p); }
         if (actual != null && proceso != null) { canceladas.Add(actual); Matar(proceso); }
@@ -346,6 +369,57 @@ public sealed partial class Cola : Observable
         e.Reiniciar();
         if (e.EsLectura) { Leer(e, yaEnLaCola: true); return; }
         Siguiente();
+    }
+
+    public void ReintentarFallidas()
+    {
+        foreach (var e in Elementos.Where(x => x.Etapa == Etapa.Fallo).ToList()) Reintentar(e);
+    }
+
+    // Pauses one row: a queued one is skipped until resumed; a running one is stopped, keeping
+    // its partial files, so it continues from there.
+    public void Pausar(Elemento e)
+    {
+        if (esperas.Remove(e, out var t))
+        {
+            t.Stop();
+            if (e == actual) actual = null;
+            e.Pausar(Etapa.Detenida);
+            Siguiente();
+        }
+        else if (e == actual && proceso != null) { pausando[e] = Etapa.Detenida; Matar(proceso); }
+        else if (e.Etapa == Etapa.EnCola) e.Etapa = Etapa.Detenida;
+        Refrescar();
+    }
+
+    public void Reanudar(Elemento e)
+    {
+        if (e.Etapa != Etapa.Detenida) return;
+        e.Etapa = Etapa.EnCola;
+        Siguiente();
+    }
+
+    // The whole-queue pause: the running download goes back to the queue, first in line.
+    public void PausarTodo()
+    {
+        EnPausa = true;
+        if (actual is not { } e) return;
+        if (esperas.Remove(e, out var t)) { t.Stop(); actual = null; e.Pausar(Etapa.EnCola); Refrescar(); }
+        else if (proceso != null) { pausando[e] = Etapa.EnCola; Matar(proceso); }
+    }
+
+    public void ReanudarTodo()
+    {
+        EnPausa = false;
+        Siguiente();
+    }
+
+    // Moves the dragged row to the place of another one; downloads start in list order.
+    public void Mover(Elemento e, Elemento destino)
+    {
+        int desde = Elementos.IndexOf(e), hasta = Elementos.IndexOf(destino);
+        if (e == destino || desde < 0 || hasta < 0) return;
+        Elementos.Move(desde, hasta);
     }
 
     public void LimpiarTerminados()
@@ -407,7 +481,7 @@ public sealed partial class Cola : Observable
     // Processes the queue serially: the next download starts when the previous one ends.
     private void Siguiente()
     {
-        if (actual != null) return;
+        if (actual != null || enPausa) { Refrescar(); return; }
         var e = Elementos.FirstOrDefault(x => x.Etapa == Etapa.EnCola && !x.EsLectura);
         if (e == null) { Refrescar(); return; }
         Iniciar(e);
@@ -448,11 +522,10 @@ public sealed partial class Cola : Observable
         args.Add(e.Enlace);
 
         var p = new Process { StartInfo = Herramientas.Preparar(args, e.Destino), EnableRaisingEvents = true };
-        p.OutputDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => { Anotar(d.Data); e.Procesar(d.Data); }); };
-        p.ErrorDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => { Anotar(d.Data); e.Procesar(d.Data); }); };
+        p.OutputDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => e.Procesar(d.Data)); };
+        p.ErrorDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => e.Procesar(d.Data)); };
         p.Exited += (_, _) => ui.BeginInvoke(() => Terminar(e, p));
 
-        Anotar($"── {e.Enlace} ──");
         e.Etapa = Etapa.Preparando;
         actual = e;
         try
@@ -481,6 +554,13 @@ public sealed partial class Cola : Observable
         ui.BeginInvoke(DispatcherPriority.Background, () =>
         {
             proceso = null;
+            if (pausando.Remove(e, out var nueva))
+            {
+                actual = null;
+                e.Pausar(nueva);
+                Siguiente();
+                return;
+            }
             bool fallo = !canceladas.Contains(e) && !e.Descartado && (codigo != 0 || e.Fallo != "");
             if (fallo && e.Reintentos < Elemento.MaxReintentos)
             {
@@ -495,8 +575,7 @@ public sealed partial class Cola : Observable
             else if (codigo == 0 && e.Fallo == "") { e.Terminar(); e.BorrarIntermedios(); Despedir(e); }
             else if (e.Etapa != Etapa.Fallo)
                 e.Fallar(e.Fallo != "" ? e.Fallo
-                    : tr($"yt-dlp terminó con el código {codigo}. El detalle está en «Detalles técnicos».",
-                         $"yt-dlp exited with code {codigo}. See \"Technical details\" for more."));
+                    : tr($"yt-dlp terminó con el código {codigo}.", $"yt-dlp exited with code {codigo}."));
             Siguiente();
         });
     }
@@ -528,7 +607,6 @@ public sealed partial class Cola : Observable
             ui.BeginInvoke(() => Leida(fila, codigo, salida.ToString(), error.ToString()));
         };
 
-        Anotar($"── {fila.Enlace} ({tr("lista", "playlist")}) ──");
         try
         {
             p.Start();
@@ -546,7 +624,6 @@ public sealed partial class Cola : Observable
     private void Leida(Elemento fila, int codigo, string json, string error)
     {
         lecturas.Remove(fila);
-        foreach (var l in error.Split('\n', StringSplitOptions.RemoveEmptyEntries)) Anotar(l);
         if (canceladas.Remove(fila)) { fila.Etapa = Etapa.Cancelada; Refrescar(); return; }
 
         if (codigo != 0)

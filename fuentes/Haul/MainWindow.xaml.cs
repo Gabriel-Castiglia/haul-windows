@@ -11,9 +11,11 @@
 //  It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 //
 
-using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Interop;
 using Haul.Core;
 using Microsoft.Win32;
@@ -41,13 +43,6 @@ public partial class MainWindow : Window
         RestaurarVentana();
         AplicarTextos();
         Loc.Cambio += AplicarTextos;
-
-        // When links are added, scroll to the queue to show progress.
-        cola.Elementos.CollectionChanged += (_, e) =>
-        {
-            if (e.Action == NotifyCollectionChangedAction.Add)
-                Dispatcher.BeginInvoke(() => SeccionCola.BringIntoView(), System.Windows.Threading.DispatcherPriority.Background);
-        };
 
         Loaded += (_, _) => Arrancar();
         Activated += (_, _) => cola.TomarDelPortapapeles();
@@ -82,7 +77,6 @@ public partial class MainWindow : Window
 
     private void AplicarTextos()
     {
-        Lema.Text = tr("Una interfaz para yt-dlp", "A front end for yt-dlp");
         SelectorIdioma.SelectedIndex = Actual == Idioma.Es ? 1 : 0;
         SelectorIdioma.ToolTip = tr("Idioma", "Language");
         BotonAcercaDe.ToolTip = tr("Acerca de Haul", "About Haul");
@@ -103,13 +97,18 @@ public partial class MainWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(SelectorIdioma, tr("Idioma", "Language"));
         TituloCola.Text = tr("Cola", "Queue");
         BotonCancelarTodo.Content = tr("Cancelar todo", "Cancel all");
+        BotonPausarTodo.Content = tr("Pausar todo", "Pause all");
+        BotonSeguirTodo.Content = tr("Seguir todo", "Resume all");
+        BotonReintentarTodas.Content = tr("Reintentar todas", "Retry all");
+        OpcionListaEntera.Content = tr("Bajar listas enteras", "Download whole playlists");
+        OpcionListaEntera.ToolTip = tr("Activado, un video que está dentro de una lista trae la lista entera; desactivado, pregunta cada vez",
+                                       "When on, a video that is part of a playlist brings the whole playlist; when off, it asks every time");
         OpcionLimpiar.Content = tr("Limpiar terminadas automáticamente", "Clear finished automatically");
         OpcionLimpiar.ToolTip = tr("Activado, cada descarga terminada sale sola de la lista",
                                    "When on, every finished download leaves the list by itself");
         OpcionInstrumentales.Content = tr("Descargar instrumentales", "Download instrumentals");
         OpcionInstrumentales.ToolTip = tr("Desactivado, los videos con «instrumental» en el título esperan en pausa",
                                           "When off, videos with \"instrumental\" in the title wait, paused");
-        Detalles.Header = tr("Detalles técnicos", "Technical details");
         Pie.Text = tr($"Haul {Herramientas.VersionHaul} · Motor: yt-dlp {Herramientas.VersionYtDlp}, incluido en la app",
                       $"Haul {Herramientas.VersionHaul} · Engine: yt-dlp {Herramientas.VersionYtDlp}, bundled with the app");
 
@@ -197,15 +196,67 @@ public partial class MainWindow : Window
     }
 
     private void CancelarTodo_Click(object sender, RoutedEventArgs e) => cola.CancelarTodo();
+    private void PausarTodo_Click(object sender, RoutedEventArgs e) => cola.PausarTodo();
+    private void SeguirTodo_Click(object sender, RoutedEventArgs e) => cola.ReanudarTodo();
+    private void ReintentarTodas_Click(object sender, RoutedEventArgs e) => cola.ReintentarFallidas();
 
     private static Elemento? Fila(object sender) => (sender as FrameworkElement)?.DataContext as Elemento;
 
     private void CancelarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Cancelar(f); }
     private void QuitarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Quitar(f); }
     private void ReintentarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Reintentar(f); }
+    private void PausarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Pausar(f); }
+    private void ReanudarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Reanudar(f); }
     private void AbrirFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender)?.Archivo is { } a) Herramientas.Abrir(a); }
     private void MostrarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender)?.Archivo is { } a) Herramientas.MostrarEnExplorador(a); }
 
-    // Keeps the technical log scrolled to its last line.
-    private void Registro_TextChanged(object sender, TextChangedEventArgs e) => CampoRegistro.ScrollToEnd();
+    // ---- Dragging rows to reorder the queue ----
+
+    private Point? inicioArrastre;
+
+    private void Fila_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // A press on one of the row's buttons is a click, not the start of a drag.
+        inicioArrastre = DentroDeBoton(e.OriginalSource as DependencyObject) ? null : e.GetPosition(this);
+    }
+
+    private void Fila_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (inicioArrastre is not { } inicio || e.LeftButton != MouseButtonState.Pressed || Fila(sender) is not { } fila) return;
+        var d = e.GetPosition(this) - inicio;
+        if (Math.Abs(d.X) < SystemParameters.MinimumHorizontalDragDistance
+            && Math.Abs(d.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        inicioArrastre = null;
+        DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(Elemento), fila), DragDropEffects.Move);
+    }
+
+    // The dragged row takes the place of the one under the pointer as it moves.
+    private void Fila_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(Elemento)) is Elemento arrastrada && Fila(sender) is { } destino)
+        {
+            cola.Mover(arrastrada, destino);
+            e.Effects = DragDropEffects.Move;
+        }
+        else e.Effects = DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void Fila_Drop(object sender, DragEventArgs e) => e.Handled = true;
+
+    // While a row is dragged near the top or bottom edge of the queue, the queue scrolls.
+    private void Desplazador_DragOver(object sender, DragEventArgs e)
+    {
+        const double borde = 40, paso = 18;
+        var y = e.GetPosition(Desplazador).Y;
+        if (y < borde) Desplazador.ScrollToVerticalOffset(Desplazador.VerticalOffset - paso);
+        else if (y > Desplazador.ActualHeight - borde) Desplazador.ScrollToVerticalOffset(Desplazador.VerticalOffset + paso);
+    }
+
+    private static bool DentroDeBoton(DependencyObject? o)
+    {
+        for (; o != null; o = o is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(o) : LogicalTreeHelper.GetParent(o))
+            if (o is ButtonBase) return true;
+        return false;
+    }
 }

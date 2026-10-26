@@ -66,7 +66,12 @@ runs. Each row shows the thumbnail, title, percentage, speed and time remaining,
 it offers to show the file in File Explorer or open it. Failed or cancelled downloads can be retried
 or removed. A cancelled download deletes the partial files it had created; files that were already
 in the folder, such as an earlier download of the same video in another format, are never touched.
-The full yt-dlp output is under "Technical details".
+
+Any row can be paused with its pause button and continued with its play button; the partial files
+stay on disk meanwhile, so the download picks up where it stopped. "Pause all", above the queue,
+holds the whole queue: the running download stops and waits first in line until "Resume all".
+"Retry all" appears when some download failed and starts every failed one again. Rows can be
+dragged with the mouse to change their order, and downloads start in the order of the list.
 
 A download that fails is tried again up to four times, two seconds apart, and the row shows which
 attempt is running ("Retry 2/4"). Partial files are kept between attempts, so yt-dlp resumes where
@@ -84,7 +89,8 @@ checked. A paused row can be downloaded on its own with its download button, and
 resumes all of them.
 
 The ⓘ button in the window shows the version, the meaning of the name, the author, the license and
-the link to this repository, in the interface language.
+the link to this repository, in the interface language. Everything from the header down to the
+Download button stays fixed; only the queue scrolls, so adding links never moves the window.
 
 The app can also be started with links from a terminal or a shortcut:
 
@@ -100,8 +106,10 @@ thumbnail and its position ("Mix · 3/12"). The files go into a subfolder named 
 are numbered in playlist order: `01 - Title.mp4`, `02 - Title.mp4`, and so on. Each video can be
 cancelled or retried on its own. A playlist with more than 200 videos asks for confirmation first.
 
-A link to a video that was opened from a playlist shows a card in the window that
-asks whether to download only that video or the whole playlist. Other links download as they are, one video each.
+A link to a video that was opened from a playlist brings the whole playlist while "Download whole
+playlists" is checked, as it is by default. With the option unchecked, a card in the window asks each
+time whether to download only that video or the whole playlist. The app remembers the setting. Other
+links download as they are, one video each.
 
 Some tag pages that group several posts, each with an embedded video, are read the same way: one
 row per post, from the oldest to the newest, so a series keeps its episode order.
@@ -140,8 +148,8 @@ the repository.
 
 ## Window and theme
 
-The window cannot be made smaller than 560 × 560, so its contents always stay readable; below that
-height the content scrolls, while the header stays fixed at the top. Size and position are remembered between sessions. The app uses the
+The window cannot be made smaller than 560 × 720, so its contents always stay readable; below that
+height the queue scrolls, while everything above it stays fixed. Size and position are remembered between sessions. The app uses the
 Windows 11 Fluent theme, always in dark mode whatever the system setting, with the accent color in
 Settings > Personalization > Colors, also when it changes while the app is open.
 

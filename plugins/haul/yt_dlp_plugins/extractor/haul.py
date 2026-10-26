@@ -83,6 +83,15 @@ def _substack_embeds(url, body):
         found.append(VimeoIE._smuggle_referrer(unescapeHTML(embed), url))
     for embed in YoutubeIE._extract_embed_urls(url, body):
         found.append(unescapeHTML(embed))
+    if not found:
+        # Some posts have no player, only a button that links to the Vimeo page of an unlisted
+        # video (vimeo.com/<id>/<hash>); it is opened through the player, as HaulVimeoIE does.
+        for video_id, unlisted_hash in re.findall(
+                r'https?://(?:www\.)?vimeo\.com/(\d+)(?:/([\da-f]{6,}))?', unescapeHTML(body)):
+            player = f'https://player.vimeo.com/video/{video_id}'
+            if unlisted_hash:
+                player += f'?h={unlisted_hash}'
+            found.append(VimeoIE._smuggle_referrer(player, url))
     return list(dict.fromkeys(found))
 
 

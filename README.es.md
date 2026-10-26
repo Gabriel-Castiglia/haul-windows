@@ -66,7 +66,14 @@ más enlaces. Cada fila muestra la miniatura, el título, el porcentaje, la velo
 restante, y al terminar ofrece mostrar el archivo en el Explorador o abrirlo. Las descargas con error
 o canceladas se pueden reintentar o quitar. Una descarga cancelada borra los archivos a medias que
 había creado; los que ya estaban en la carpeta, como una descarga anterior del mismo video en otro
-formato, no se tocan nunca. La salida completa de yt-dlp está en «Detalles técnicos».
+formato, no se tocan nunca.
+
+Cada fila se puede pausar con su botón de pausa y seguir con el de reproducir; mientras tanto, los
+archivos a medias quedan en el disco y la descarga retoma donde quedó. «Pausar todo», arriba de la
+cola, frena la cola entera: la descarga en curso se detiene y espera primera en la fila hasta «Seguir
+todo». «Reintentar todas» aparece cuando alguna descarga falló y vuelve a lanzar todas las fallidas.
+Las filas se arrastran con el mouse para cambiar el orden, y las descargas arrancan en el orden de la
+lista.
 
 Una descarga que falla se reintenta hasta cuatro veces, con dos segundos entre cada intento, y la fila
 muestra qué intento está en curso («Reintento 2/4»). Los archivos a medias se conservan entre intentos,
@@ -85,6 +92,8 @@ marcar la opción se reanudan todas.
 
 El botón ⓘ de la ventana muestra la versión, qué significa el nombre, el autor, la licencia y el
 enlace a este repositorio, en el idioma de la interfaz.
+Desde el encabezado hasta el botón Descargar todo queda fijo; solo la cola se desplaza, así que
+agregar enlaces nunca mueve la ventana.
 
 También se puede iniciar con enlaces desde una terminal o un acceso directo:
 
@@ -100,8 +109,10 @@ de la lista y se numeran en el orden de la lista: `01 - Título.mp4`, `02 - Tít
 video se puede cancelar o reintentar por separado. Una lista de más de 200 videos pide confirmación
 antes de entrar a la cola.
 
-Un enlace a un video abierto desde una lista muestra en la ventana una tarjeta
-que pregunta si se baja solo ese video o la lista entera. Los demás enlaces se descargan tal cual, un video cada uno.
+Un enlace a un video abierto desde una lista trae la lista entera mientras esté marcada «Bajar
+listas enteras», que viene marcada. Con la opción desmarcada, una tarjeta en la ventana pregunta cada
+vez si se baja solo ese video o la lista entera. La app recuerda el ajuste. Los demás enlaces se
+descargan tal cual, un video cada uno.
 
 Algunas páginas de etiqueta que agrupan varias publicaciones, cada una con un video embebido, se leen
 igual: una fila por publicación, de la más vieja a la más nueva, así una serie conserva el orden de
@@ -141,9 +152,9 @@ parte del repositorio.
 
 ## Ventana y tema
 
-La ventana no se puede achicar por debajo de 560 × 560, así que su contenido siempre se lee; por
-debajo de esa altura el contenido se desplaza,
-mientras el encabezado queda fijo arriba. El tamaño y la posición se recuerdan entre sesiones.
+La ventana no se puede achicar por debajo de 560 × 720, así que su contenido siempre se lee; por
+debajo de esa altura la cola se desplaza,
+mientras todo lo de arriba queda fijo. El tamaño y la posición se recuerdan entre sesiones.
 La aplicación usa el tema Fluent de Windows 11, siempre en modo oscuro aunque el sistema esté en
 claro, con el color de énfasis de Configuración > Personalización > Colores, también si cambia con la
 aplicación abierta.
