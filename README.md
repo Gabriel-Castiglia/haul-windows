@@ -1,6 +1,6 @@
 # Haul for Windows
 
-Gabriel Castiglia · October 24, 2026 · version 1.3.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · November 9, 2026 · version 1.5.0 · GPL-2.0 license · built and tested with yt-dlp 2026.08.19
 
 English · [Español](README.es.md)
 
@@ -14,41 +14,54 @@ Haul is a Windows app that works as a front end for
 [yt-dlp](https://github.com/yt-dlp/yt-dlp). The app builds the command, shows the progress and
 manages a download queue. The actual work is done by yt-dlp, bundled with the app at a fixed,
 verified version, and by ffmpeg. It is the Windows sibling of the macOS app of the same name: same
-features, same formats, same behavior. The interface follows the Windows theme (light or dark) and
-accent color, and is available in English and Spanish; it starts in English on first launch and
-remembers the choice.
+features, same formats, same behavior. The window is always dark, with the Windows accent color, and
+the interface is available in English and Spanish; it starts in the language chosen in the setup
+window, or in English, and remembers the choice.
 
 ## Requirements
 
 - Windows 11, or Windows 10 version 1809 or later, on a 64-bit PC. Tested on Windows 11 Pro.
 - [winget](https://learn.microsoft.com/windows/package-manager/winget/) (the "App Installer" from
-  the Microsoft Store, included in Windows 11).
+  the Microsoft Store, included in Windows 11), which the setup program uses to install FFmpeg and
+  Deno.
 
-yt-dlp ships with the app. The .NET 10 SDK, ffmpeg and deno are installed by the installer, so nothing
-has to be installed by hand. Visual Studio is not needed.
+yt-dlp ships with the app, and Haul carries its own .NET runtime, so nothing has to be installed by
+hand.
 
 ## Installation
 
-```
-git clone https://github.com/Gabriel-Castiglia/haul-windows.git
-cd haul-windows
-powershell -ExecutionPolicy Bypass -File scripts\instalar.ps1
-```
+Download `haul-setup.exe` from the
+[releases page](https://github.com/Gabriel-Castiglia/haul-windows/releases) and run it. The setup
+window has a language menu in its top right corner, and every page changes language at once. It
+installs Haul for all users in `C:\Program Files\Haul`, which takes administrator rights (Windows
+asks for them when installation starts), and adds Haul to the Start menu. Then, as the user who ran
+it, it installs FFmpeg and Deno with winget, or upgrades them if they are already there; yt-dlp needs
+FFmpeg to join picture and sound and to convert to MP3, and Deno to solve JavaScript challenges. The
+language chosen in the setup window is the one Haul uses when it starts for the first time.
 
-The installer:
+![The setup window](docs/images/setup-install-en.png)
 
-1. installs the .NET 10 SDK, ffmpeg and deno with winget or, if they are already present, upgrades
-   them;
-2. builds the app, after checking the bundled yt-dlp against its official checksums;
-3. copies it to `%LOCALAPPDATA%\Programs\Haul`, quitting it first if it is running, and creates the
-   Start menu shortcut and the entry in Settings > Apps > Installed apps.
+| File | What it is |
+|---|---|
+| `haul-setup.exe` | Setup program, in English or Spanish. The usual way to install. |
+| `haul.msi` | The same installation as a Windows Installer package, for silent installs: `msiexec /i haul.msi /qn`. It does not install FFmpeg and Deno; install them with `winget install yt-dlp.FFmpeg DenoLand.Deno`. |
 
-No administrator rights are needed for the app itself. Running the installer again is how
-everything gets updated, dependencies and app alike.
+Running a newer `haul-setup.exe` updates an installed Haul and keeps each user's settings. If Haul is
+running, setup closes it before replacing its files. An installation made with the scripts of
+version 1.4 or earlier (in `%LOCALAPPDATA%\Programs\Haul`) is removed, keeping its settings, so only
+one Haul remains. An older version cannot be installed over a newer one.
 
-To uninstall: Settings > Apps > Installed apps > Haul > Uninstall, or
-`powershell -ExecutionPolicy Bypass -File scripts\desinstalar.ps1`. Downloaded files are never
-touched; preferences are kept unless `-Preferencias` is added.
+The files are not signed with a commercial certificate, so the first time Windows SmartScreen may show
+"Windows protected your PC". "More info" → "Run anyway" opens them. The `SHA256SUMS.txt` file of
+each release lets you check the download first: `Get-FileHash haul-setup.exe`.
+
+## Uninstallation
+
+Open Settings → Apps → Installed apps, find Haul and choose Uninstall. The same setup window opens,
+with its language menu. It closes Haul if it is running and removes the program and the Start menu
+shortcut. Downloaded files and each user's settings (`%APPDATA%\Haul`) are kept, and FFmpeg and Deno
+stay installed, because other programs may use them; `winget uninstall yt-dlp.FFmpeg DenoLand.Deno`
+removes them.
 
 ## Usage
 
@@ -131,20 +144,36 @@ H.264 is preferred because every Windows player handles it. Files are named afte
 | `fuentes/Haul/Core/` | Queue, playlists, links, settings and the yt-dlp process |
 | `icono/icono.html` | Icon as SVG, shared with the macOS version |
 | `icono/icono-1024.png`, `icono/icono-256.png`, `icono/Haul.ico` | Rendered icon and the Windows icon file |
-| `scripts/instalar.ps1` | Dependencies, build and installation |
-| `scripts/compilar.ps1` | Build into `build\Haul` |
-| `scripts/desinstalar.ps1` | Uninstaller (also copied next to the app) |
+| `installer/Msi/` | The MSI package (WiX) |
+| `installer/SetupUI/` | The setup window, in English and Spanish (.NET Framework 4.7.2, WPF), which also runs winget |
+| `installer/Setup/` | The setup program that carries the setup window and the MSI (WiX bundle) |
+| `scripts/build.ps1` | Checks the bundled yt-dlp and builds Haul, `haul.msi` and `haul-setup.exe` into `dist\` |
 | `scripts/actualizar-yt-dlp.ps1` | Replaces the bundled yt-dlp with another verified release |
 | `scripts/extraer_licencias.py` | Reads the third-party licenses stored inside `yt-dlp.exe` |
-| `scripts/manual.ps1` | Builds the PDF manuals from the READMEs (pandoc and Edge, Chrome or Brave) |
+| `scripts/manual.sh` | Builds the PDF manuals and `README.txt`, `README.es.txt` from the READMEs (on macOS, with pandoc and Google Chrome) |
 | `plugins/haul/` | Haul's own yt-dlp extractor plugin, for links the bundled version does not handle |
 | `vendor/yt-dlp/` | Bundled copy of yt-dlp 2026.08.19, with sources, checksums, signature and licenses |
 | `docs/Haul-manual-en.pdf`, `docs/Haul-manual-es.pdf` | PDF manuals, in English and Spanish |
 | `docs/manual.css` | Stylesheet for the manuals |
 | `README.md`, `README.es.md` | This documentation, in English and Spanish |
+| `README.txt`, `README.es.txt` | Plain-text copies that the installer puts next to `Haul.exe` |
+| `CHANGELOG.md` | Version history |
 
-The `build\` folder and the compiler's `bin\` and `obj\` folders are generated and are not part of
-the repository.
+The `build\` and `dist\` folders and the compiler's `bin\` and `obj\` folders are generated and are
+not part of the repository.
+
+To build from source, with the [.NET 10 SDK](https://dotnet.microsoft.com/download) installed:
+
+```
+git clone https://github.com/Gabriel-Castiglia/haul-windows.git
+cd haul-windows
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1
+```
+
+`build.ps1` refuses to build if the bundled `yt-dlp.exe` does not match its official checksums. It
+publishes Haul as a self-contained `Haul.exe` with `yt-dlp.exe`, `plugins\` and `licenses\` next to
+it, and builds `dist\haul.msi` and `dist\haul-setup.exe`; the WiX Toolset is restored automatically
+as a NuGet package. The version is set in one place, `fuentes\Haul\Haul.csproj`.
 
 ## Window and theme
 
@@ -162,14 +191,14 @@ When that happens, a new release of Haul moves to a newer yt-dlp:
 
 ```
 powershell -ExecutionPolicy Bypass -File scripts\actualizar-yt-dlp.ps1 <version>
-powershell -ExecutionPolicy Bypass -File scripts\instalar.ps1
+powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
 The first script downloads the release, verifies its signature with the key stored in
 `vendor\yt-dlp\public.key` (using the gpg that ships with Git for Windows) and its SHA-256
 checksums, and only then replaces the files and refreshes the license texts. It needs Python to read
-the licenses stored inside `yt-dlp.exe`. Running `scripts\instalar.ps1` again also upgrades the
-.NET SDK, ffmpeg and deno.
+the licenses stored inside `yt-dlp.exe`. Running the new `haul-setup.exe` also upgrades FFmpeg and
+Deno.
 
 The most common yt-dlp errors are shown in plain words in the interface language (video
 unavailable, private video, unsupported site, missing playlist, no connection); anything else
@@ -223,7 +252,8 @@ Haul is a front end; the hard work belongs to these projects:
 | [astring](https://github.com/davidbonnet/astring), by David Bonnet, inside yt-dlp-ejs | JavaScript code generator | [MIT](https://github.com/davidbonnet/astring/blob/main/LICENSE) |
 | [FFmpeg](https://ffmpeg.org), build by the yt-dlp project, installed with winget, not bundled | Merges picture and sound, converts to MP3 | [GPL-3.0+](https://ffmpeg.org/legal.html) for this build |
 | [Deno](https://deno.com), installed with winget | JavaScript runtime used by yt-dlp | [MIT](https://github.com/denoland/deno/blob/main/LICENSE.md) |
-| [.NET](https://dotnet.microsoft.com) and WPF, installed with winget | Runtime and user interface framework | [MIT](https://github.com/dotnet/wpf/blob/main/LICENSE.TXT) |
+| [.NET](https://dotnet.microsoft.com) and WPF, inside `Haul.exe` | Runtime and user interface framework | [MIT](https://github.com/dotnet/wpf/blob/main/LICENSE.TXT) |
+| [WiX Toolset](https://wixtoolset.org), only to build the installers | MSI package and setup program | [MS-RL](https://github.com/wixtoolset/wix/blob/main/LICENSE.TXT) |
 | [Segoe Fluent Icons](https://learn.microsoft.com/windows/apps/design/style/segoe-fluent-icons-font), part of Windows | Icons of the interface | Windows license |
 | [pandoc](https://pandoc.org), only to build the PDF manuals | Markdown to HTML conversion | [GPL-2.0+](https://github.com/jgm/pandoc/blob/main/COPYRIGHT) |
 

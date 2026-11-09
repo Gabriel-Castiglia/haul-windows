@@ -28,7 +28,7 @@
     <AssemblyName>Haul</AssemblyName>
     <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
     <!-- Plain "1.1.0" in Settings > Apps, without the git commit the SDK appends by default. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Haul</Product>
@@ -41,19 +41,32 @@
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
     <!-- The bundled yt-dlp version is read from vendor/yt-dlp/VERSION and stored in the assembly. -->
     <YtDlpVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\vendor\yt-dlp\VERSION').Trim())</YtDlpVersion>
+    <!-- Debug data names source files from the repository root (/_/), not from the folder where it was built. -->
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))=/_/</PathMap>
+  </PropertyGroup>
+
+  <!-- "dotnet publish -c Release" produces a single self-contained Haul.exe (no .NET install required);
+       yt-dlp.exe, the plugins and the licenses stay next to it as separate files. -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
     <AssemblyMetadata Include="YtDlpVersion" Value="$(YtDlpVersion)" />
     <Resource Include="..\..\icono\icono-256.png" Link="Recursos\icono-256.png" />
     <None Include="..\..\vendor\yt-dlp\yt-dlp.exe" Link="yt-dlp.exe"
-          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="..\..\vendor\yt-dlp\licenses\*" Link="licenses\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="..\..\plugins\**\*.py" Link="plugins\%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="..\..\LICENSE" Link="licenses\Haul-LICENSE"
-          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
 </Project>

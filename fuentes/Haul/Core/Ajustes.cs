@@ -84,6 +84,8 @@ public static class Ajustes
         {
             if (File.Exists(Archivo))
                 Datos = JsonSerializer.Deserialize<Valores>(File.ReadAllText(Archivo), Opciones) ?? new();
+            else if (Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"Software\Haul")?.GetValue("Language") is "es")
+                Datos.Idioma = "es"; // first start after setup: the language chosen in the setup window
         }
         catch
         {

@@ -1,0 +1,86 @@
+<!--
+  Package.wxs
+  MSI package for Haul.
+
+  Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
+  Date: November 9, 2026
+  SPDX-License-Identifier: GPL-2.0-only
+
+  This program is free software: you can redistribute it and/or modify it under the terms of
+  the GNU General Public License, version 2, as published by the Free Software Foundation.
+  It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
+-->
+<!--
+  - Per-machine install into "Program Files\Haul" (requires administrator rights).
+  - Start menu shortcut and an "Installed apps" entry with its icon.
+  - MajorUpgrade: installing a newer version replaces the previous one automatically.
+  - Closes a running Haul before replacing or removing its files.
+  - Stores the interface language chosen in the setup window (HKLM\Software\Haul\Language).
+  Each user's settings (%APPDATA%\Haul) and downloaded files are never touched, so they survive
+  upgrades and uninstalls. FFmpeg and Deno are installed by the setup window with winget, not by this package.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="Haul"
+           Manufacturer="Gabriel Castiglia"
+           Version="$(var.Version)"
+           UpgradeCode="f521745b-0a86-4da0-98e0-4e7263b0f314"
+           Scope="perMachine"
+           Language="1033"
+           Codepage="1252">
+    <SummaryInformation Description="Haul for Windows: a graphical front end for yt-dlp" Manufacturer="Gabriel Castiglia" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Haul is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="haul.ico" SourceFile="..\..\icono\Haul.ico" />
+    <Property Id="ARPPRODUCTICON" Value="haul.ico" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPCOMMENTS" Value="A front end for yt-dlp. License: GPL-2.0-only." />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Gabriel-Castiglia/haul-windows" />
+    <!-- Interface language chosen in the setup window ("en" or "es"); the app uses it on its first start. -->
+    <Property Id="HAULLANGUAGE" Value="en" />
+
+    <!-- Close the running app before its files are replaced or removed. -->
+    <util:CloseApplication Id="CloseHaul" Target="Haul.exe" CloseMessage="yes" TerminateProcess="0" RebootPrompt="no" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Haul">
+        <Component Id="HaulExe">
+          <File Id="HaulExe" Source="$(var.PublishDir)Haul.exe" KeyPath="yes">
+            <!-- Start menu shortcut (all users). -->
+            <Shortcut Id="HaulShortcut" Directory="ProgramMenuFolder" Name="Haul" Description="A front end for yt-dlp"
+                      WorkingDirectory="INSTALLFOLDER" Advertise="no" />
+          </File>
+          <RegistryValue Root="HKLM" Key="Software\Haul" Name="InstallFolder" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Root="HKLM" Key="Software\Haul" Name="Language" Type="string" Value="[HAULLANGUAGE]" />
+        </Component>
+        <Component Id="YtDlp">
+          <File Id="YtDlp" Source="$(var.PublishDir)yt-dlp.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="License">
+          <File Id="License" Source="..\..\LICENSE" Name="LICENSE.txt" KeyPath="yes" />
+        </Component>
+        <Component Id="Readme">
+          <File Id="Readme" Source="..\..\README.txt" KeyPath="yes" />
+        </Component>
+        <Component Id="ReadmeEs">
+          <File Id="ReadmeEs" Source="..\..\README.es.txt" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Haul">
+      <ComponentRef Id="HaulExe" />
+      <ComponentRef Id="License" />
+      <ComponentRef Id="Readme" />
+      <ComponentRef Id="ReadmeEs" />
+      <ComponentRef Id="YtDlp" />
+      <!-- yt-dlp's licenses and Haul's yt-dlp plugin, as published next to Haul.exe. -->
+      <Files Directory="INSTALLFOLDER" Subdirectory="licenses" Include="$(var.PublishDir)licenses\**" />
+      <Files Directory="INSTALLFOLDER" Subdirectory="plugins" Include="$(var.PublishDir)plugins\**" />
+    </Feature>
+  </Package>
+</Wix>

@@ -118,8 +118,8 @@ public partial class MainWindow : Window
         if (Herramientas.Deno == null) faltan.Add("deno");
         AvisoFaltantes.Visibility = faltan.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         TextoFaltantes.Text = tr(
-            $"Falta {string.Join(", ", faltan)}. Volvé a instalar Haul: powershell -ExecutionPolicy Bypass -File scripts\\instalar.ps1",
-            $"{string.Join(", ", faltan)} missing. Reinstall Haul: powershell -ExecutionPolicy Bypass -File scripts\\instalar.ps1");
+            $"Falta {string.Join(", ", faltan)}. Volvé a ejecutar haul-setup.exe, que instala FFmpeg y Deno con winget.",
+            $"{string.Join(", ", faltan)} missing. Run haul-setup.exe again; it installs FFmpeg and Deno with winget.");
     }
 
     // ---- Window size and position, kept between sessions ----

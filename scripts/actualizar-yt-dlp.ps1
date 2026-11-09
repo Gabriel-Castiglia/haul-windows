@@ -16,7 +16,7 @@
 # ships with Git for Windows) and the SHA-256 hashes; only then replaces the files and refreshes
 # the license texts, including the third-party licenses stored inside yt-dlp.exe (needs Python).
 # Afterwards: update the version in both READMEs and vendor\yt-dlp\README*.md, test, and run
-# scripts\instalar.ps1 again.
+# scripts\build.ps1 and run dist\haul-setup.exe again.
 
 param([Parameter(Mandatory = $true)][string]$Version)
 
@@ -73,4 +73,4 @@ try {
 }
 
 Write-Host "vendor\yt-dlp now holds yt-dlp $Version."
-Write-Host 'Next: review vendor\yt-dlp\licenses, update the version in the READMEs, then scripts\instalar.ps1'
+Write-Host 'Next: review vendor\yt-dlp\licenses, update the version in the READMEs, then scripts\build.ps1'
