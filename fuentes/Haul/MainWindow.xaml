@@ -16,7 +16,7 @@
         xmlns:core="clr-namespace:Haul.Core"
         Title="Haul" Width="640" Height="800" MinWidth="560" MinHeight="720"
         WindowStartupLocation="CenterScreen"
-        Icon="pack://application:,,,/Recursos/icono-256.png">
+        Icon="{DynamicResource IconoVentana}">
 
     <Window.InputBindings>
         <KeyBinding Key="Enter" Modifiers="Control" Command="{x:Static core:Comandos.Descargar}" />
@@ -47,7 +47,7 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Image Width="52" Height="52" Source="pack://application:,,,/Recursos/icono-256.png"
+            <Image Width="52" Height="52" Source="{DynamicResource IconoHaul}"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.Effect>
                     <DropShadowEffect BlurRadius="10" ShadowDepth="4" Opacity="0.35" />
@@ -61,6 +61,9 @@
                     <ComboBoxItem Content="English" />
                     <ComboBoxItem Content="Español" />
                 </ComboBox>
+                <Button x:Name="BotonTema" Margin="8,0,0,0" Padding="9,6" Click="Tema_Click">
+                    <TextBlock Style="{StaticResource Glifo}" FontSize="14" Text="&#xE790;" />
+                </Button>
                 <Button x:Name="BotonAcercaDe" Margin="8,0,0,0" Padding="9,6" Click="AcercaDe_Click">
                     <TextBlock Style="{StaticResource Glifo}" FontSize="14" Text="&#xE946;" />
                 </Button>

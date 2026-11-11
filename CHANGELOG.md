@@ -2,6 +2,26 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.6.0 - 2026-11-11
+
+### Added
+
+- Light, dark or as Windows, in the new appearance window (the palette button in the header). "As Windows"
+  follows Windows while Haul is open. A settings file from an earlier version keeps the dark window; a new
+  installation follows Windows.
+- Twelve colours. The one chosen colours the buttons, check boxes, selected items and the icon of the window
+  and of its taskbar button. Before, the window took the accent colour of Windows.
+- Notice of new versions: once a day Haul asks GitHub for the latest version number and, if it is newer,
+  offers to open the download page. The ⓘ window turns it off and asks on request.
+- Pictures of the window in the README, drawn by `scripts/screenshots.ps1`.
+
+### Changed
+
+- A new icon: the eagle carrying a hare from an engraving by the Monogrammist B (Italy, 17th century;
+  Rijksmuseum, public domain), drawn by `scripts/make_icon.py` in the twelve colours, orange by default.
+- The README and the manuals say x64 only and link to the latest release; the command-line example points to
+  the installed `Haul.exe` in `C:\Program Files\Haul`.
+
 ## 1.5.0 - 2026-11-09
 
 ### Added

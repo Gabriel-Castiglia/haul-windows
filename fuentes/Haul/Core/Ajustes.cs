@@ -63,6 +63,14 @@ public static class Ajustes
         public bool LimpiarSola { get; set; }
         public bool Instrumentales { get; set; }
         public bool ListaEntera { get; set; } = true;
+        // "auto" (as Windows), "light" or "dark". A settings file from before 1.6 has none and keeps the dark
+        // window it had; a new installation follows Windows.
+        public string? Apariencia { get; set; }
+        // Accent colour: the key of one of Tema.Colores.
+        public string? Color { get; set; }
+        // Once a day Haul asks GitHub whether there is a newer version, and says so if there is.
+        public bool BuscarVersiones { get; set; } = true;
+        public DateTime UltimaBusqueda { get; set; }
     }
 
     public static readonly string Carpeta =
@@ -83,7 +91,10 @@ public static class Ajustes
         try
         {
             if (File.Exists(Archivo))
+            {
                 Datos = JsonSerializer.Deserialize<Valores>(File.ReadAllText(Archivo), Opciones) ?? new();
+                Datos.Apariencia ??= "dark";
+            }
             else if (Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"Software\Haul")?.GetValue("Language") is "es")
                 Datos.Idioma = "es"; // first start after setup: the language chosen in the setup window
         }
@@ -92,10 +103,16 @@ public static class Ajustes
             // A damaged file is replaced by the defaults on the next save.
             Datos = new();
         }
+        Datos.Apariencia = Datos.Apariencia is "light" or "dark" ? Datos.Apariencia : "auto";
+        Datos.Color = Tema.Obtener(Datos.Color).Clave;
     }
+
+    // A test screenshot never writes the settings.
+    public static bool SoloLectura { get; set; }
 
     public static void Guardar()
     {
+        if (SoloLectura) return;
         try
         {
             Directory.CreateDirectory(Carpeta);

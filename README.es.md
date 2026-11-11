@@ -1,12 +1,17 @@
-# Haul para Windows
+<p align="center"><img src="icono/icono-256.png" width="140" alt="Haul"></p>
 
-Gabriel Castiglia · 9 de noviembre de 2026 · versión 1.5.0 · licencia GPL-2.0 · hecho y probado con yt-dlp 2026.08.19
+<h1 align="center">Haul para Windows</h1>
+<p align="center"><b>Videos y música de la web a tu carpeta, con yt-dlp haciendo el trabajo.</b></p>
+
+<p align="center"><img src="docs/images/main-dark-es.png" width="420" alt="La ventana de Haul, oscura"></p>
+
+Gabriel Castiglia · 11 de noviembre de 2026 · versión 1.6.0 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 
-Repositorio: <https://github.com/Gabriel-Castiglia/haul-windows>
+Versión para macOS: <https://github.com/Gabriel-Castiglia/haul> (solo Apple silicon)
 
-Versión para macOS: <https://github.com/Gabriel-Castiglia/haul>
+> **Solo para Windows 10/11 en x64 (Intel o AMD de 64 bits).** No hay versión para procesadores ARM.
 
 Manual en PDF: [`docs/Haul-manual-es.pdf`](docs/Haul-manual-es.pdf)
 
@@ -14,13 +19,13 @@ Haul es una aplicación de Windows que hace de interfaz de
 [yt-dlp](https://github.com/yt-dlp/yt-dlp). La aplicación arma el comando, muestra el
 avance y maneja una cola de descargas. El trabajo de fondo lo hacen yt-dlp, incluido en la aplicación
 en una versión fija y verificada, y ffmpeg. Es la hermana para Windows de la aplicación de macOS del
-mismo nombre: mismas funciones, mismos formatos, mismo comportamiento. La ventana es siempre oscura,
-con el color de énfasis de Windows, y la interfaz está en inglés y en castellano; arranca en el idioma
+mismo nombre: mismas funciones, mismos formatos, mismo comportamiento. La ventana puede ser clara,
+oscura o seguir a Windows, en uno de doce colores, y la interfaz está en inglés y en castellano; arranca en el idioma
 elegido en la ventana de instalación, o en inglés, y recuerda la elección.
 
 ## Requisitos
 
-- Windows 11, o Windows 10 versión 1809 o posterior, en una PC de 64 bits. Probado en Windows 11 Pro.
+- Windows 11, o Windows 10 versión 1809 o posterior, en una PC x64 (Intel o AMD de 64 bits). Probado en Windows 11 Pro.
 - [winget](https://learn.microsoft.com/windows/package-manager/winget/) (el «Instalador de
   aplicación» de Microsoft Store, incluido en Windows 11), que el programa de instalación usa para
   instalar FFmpeg y Deno.
@@ -31,7 +36,7 @@ nada a mano.
 ## Instalación
 
 Descarga `haul-setup.exe` de la
-[página de versiones](https://github.com/Gabriel-Castiglia/haul-windows/releases) y ejecútalo. La
+[última versión publicada](https://github.com/Gabriel-Castiglia/haul-windows/releases/latest) y ejecútalo. La
 ventana de instalación tiene un menú de idioma arriba a la derecha, y cada página cambia de idioma al
 instante. Instala Haul para todos los usuarios en `C:\Program Files\Haul`, lo que pide permisos de
 administrador (Windows los pide al empezar la instalación), y agrega Haul al menú Inicio. Después,
@@ -108,14 +113,15 @@ Los videos con «instrumental» en el título esperan en la cola, en pausa, salv
 marcar la opción se reanudan todas.
 
 El botón ⓘ de la ventana muestra la versión, qué significa el nombre, el autor, la licencia y el
-enlace a este repositorio, en el idioma de la interfaz.
+enlace a este repositorio, en el idioma de la interfaz. El botón de la paleta, al lado, abre la
+ventana de apariencia.
 Desde el encabezado hasta el botón Descargar todo queda fijo; solo la cola se desplaza, así que
 agregar enlaces nunca mueve la ventana.
 
 También se puede iniciar con enlaces desde una terminal o un acceso directo:
 
 ```
-"%LOCALAPPDATA%\Programs\Haul\Haul.exe" --descargar URL1 URL2
+"C:\Program Files\Haul\Haul.exe" --descargar URL1 URL2
 ```
 
 ## Listas de reproducción
@@ -150,8 +156,10 @@ Se prefiere H.264 porque cualquier reproductor de Windows lo abre. Los archivos 
 |---|---|
 | `fuentes/Haul/` | Código de la aplicación (C#, WPF sobre .NET 10) |
 | `fuentes/Haul/Core/` | Cola, listas, enlaces, preferencias y el proceso de yt-dlp |
-| `icono/icono.html` | Ícono en SVG, compartido con la versión de macOS |
-| `icono/icono-1024.png`, `icono/icono-256.png`, `icono/Haul.ico` | Ícono renderizado y el archivo de ícono de Windows |
+| `assets/` | El grabado del que sale el ícono |
+| `scripts/make_icon.py` | Dibuja el ícono en sus doce colores (Python 3 con numpy, opencv-python, scipy y Pillow); el mismo script hace el ícono de la versión de macOS |
+| `icono/Haul.ico`, `icono/icono-256.png`, `icono/icono-1024.png`, `icono/accents/` | El ícono, en su naranja de siempre y en cada color |
+| `scripts/screenshots.ps1` | Dibuja las imágenes de la ventana en `docs/images` |
 | `installer/Msi/` | El paquete MSI (WiX) |
 | `installer/SetupUI/` | La ventana de instalación, en inglés y en castellano (.NET Framework 4.7.2, WPF), que además ejecuta winget |
 | `installer/Setup/` | El programa de instalación que lleva la ventana y el MSI (paquete de WiX) |
@@ -187,11 +195,26 @@ versión se fija en un solo lugar, `fuentes\Haul\Haul.csproj`.
 ## Ventana y tema
 
 La ventana no se puede achicar por debajo de 560 × 720, así que su contenido siempre se lee; por
-debajo de esa altura la cola se desplaza,
-mientras todo lo de arriba queda fijo. El tamaño y la posición se recuerdan entre sesiones.
-La aplicación usa el tema Fluent de Windows 11, siempre en modo oscuro aunque el sistema esté en
-claro, con el color de énfasis de Configuración > Personalización > Colores, también si cambia con la
-aplicación abierta.
+debajo de esa altura la cola se desplaza, mientras todo lo de arriba queda fijo. El tamaño y la
+posición se recuerdan entre sesiones.
+
+La aplicación usa el tema Fluent de Windows 11, claro, oscuro o como Windows (lo que esté elegido para
+las aplicaciones en Configuración > Personalización > Colores, y lo sigue con la aplicación abierta).
+El botón de la paleta, en el encabezado, abre la ventana de apariencia, que también tiene doce colores:
+el elegido pinta los botones, las casillas y lo seleccionado, y el ícono de la ventana y de su botón en
+la barra de tareas, donde el águila vuela sobre un fondo de ese color. El ícono del menú Inicio sigue
+naranja, porque Haul se instala para todos los usuarios y ese acceso es de todos. Un archivo de
+ajustes de una versión anterior conserva la ventana oscura que tenía; una instalación nueva sigue a
+Windows.
+
+![La ventana de apariencia](docs/images/theme-es.png)
+
+## Versiones nuevas
+
+Una vez por día, Haul le pregunta a GitHub el número de la última versión. Si es más nueva, una ventana
+chica lo avisa y ofrece abrir la página de descarga; Haul nunca baja ni instala una versión nueva por su
+cuenta. La consulta no lleva más que el nombre del programa y su versión. La ventana ⓘ la apaga
+(«Avisar cuando haya una versión nueva») y pregunta cuando se quiera («Buscar versión nueva»).
 
 ## Mantenimiento
 
@@ -214,8 +237,8 @@ Los errores más comunes de yt-dlp se muestran en palabras simples en el idioma 
 no disponible, video privado, sitio no soportado, lista inexistente, sin conexión); el resto aparece
 tal como lo escribe yt-dlp.
 
-Las preferencias (idioma, carpeta, formato, tamaño de la ventana, «Limpiar terminadas automáticamente» y
-«Descargar instrumentales») se guardan en
+Las preferencias (idioma, carpeta, formato, tamaño de la ventana, apariencia, color, «Limpiar terminadas
+automáticamente», «Descargar instrumentales» y el aviso de versiones nuevas) se guardan en
 `%APPDATA%\Haul\settings.json`. Borrar ese archivo las devuelve a su valor inicial.
 
 ## Notas técnicas
@@ -282,3 +305,6 @@ fuente. El texto completo está en [`LICENSE`](LICENSE).
 Haul incluye una copia sin modificar de yt-dlp en `vendor/yt-dlp`, que conserva sus propias licencias
 (Unlicense, más las de los componentes dentro de `yt-dlp.exe`) y no está cubierta por la GPL. Haul
 ejecuta yt-dlp y ffmpeg como programas separados y no se enlaza con ellos; ffmpeg no se incluye.
+
+El ícono es el águila que trae una liebre del grabado «Águila que le trae una liebre a una joven», del
+Monogramista B (Italia, siglo XVII), Rijksmuseum, dominio público (CC0).

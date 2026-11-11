@@ -18,14 +18,15 @@
     <Application.Resources>
         <ResourceDictionary>
 
-            <!-- Accent brushes. Acento.cs fills them from the Windows accent color and refreshes
-                 them when it changes; these values are only the fallback. -->
-            <Color x:Key="AcentoColor">#1E8E45</Color>
-            <SolidColorBrush x:Key="AcentoBrush" Color="#1E8E45" />
-            <SolidColorBrush x:Key="AcentoSuaveBrush" Color="#401E8E45" />
+            <!-- Accent brushes. Tema.cs fills them from the chosen colour, for a light or a dark window;
+                 these values are only the fallback. -->
+            <Color x:Key="AcentoColor">#D9652F</Color>
+            <SolidColorBrush x:Key="AcentoBrush" Color="#D9652F" />
+            <SolidColorBrush x:Key="AcentoSuaveBrush" Color="#40D9652F" />
+            <SolidColorBrush x:Key="TextoSobreAcentoBrush" Color="White" />
             <LinearGradientBrush x:Key="DegradeBrush" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Offset="0" Color="#1E8E45" />
-                <GradientStop Offset="1" Color="#145C2D" />
+                <GradientStop Offset="0" Color="#D9652F" />
+                <GradientStop Offset="1" Color="#8D411E" />
             </LinearGradientBrush>
 
             <FontFamily x:Key="Iconos">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
@@ -91,7 +92,7 @@
                                     <Setter TargetName="Marco" Property="Padding" Value="9" />
                                     <Setter TargetName="Marco" Property="Background" Value="Transparent" />
                                     <Setter TargetName="Azulejo" Property="Background" Value="{DynamicResource DegradeBrush}" />
-                                    <Setter TargetName="Icono" Property="Foreground" Value="White" />
+                                    <Setter TargetName="Icono" Property="Foreground" Value="{DynamicResource TextoSobreAcentoBrush}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -102,7 +103,7 @@
             <!-- Main action: a pill filled with the accent gradient. -->
             <Style x:Key="BotonGrande" TargetType="Button">
                 <Setter Property="Cursor" Value="Hand" />
-                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Foreground" Value="{DynamicResource TextoSobreAcentoBrush}" />
                 <Setter Property="FontSize" Value="15" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="Template">

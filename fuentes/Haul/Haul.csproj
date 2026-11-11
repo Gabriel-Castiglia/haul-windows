@@ -28,7 +28,7 @@
     <AssemblyName>Haul</AssemblyName>
     <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
     <!-- Plain "1.1.0" in Settings > Apps, without the git commit the SDK appends by default. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Haul</Product>
@@ -58,7 +58,7 @@
 
   <ItemGroup>
     <AssemblyMetadata Include="YtDlpVersion" Value="$(YtDlpVersion)" />
-    <Resource Include="..\..\icono\icono-256.png" Link="Recursos\icono-256.png" />
+    <Resource Include="..\..\icono\accents\*.ico" Link="Recursos\accents\%(Filename)%(Extension)" />
     <None Include="..\..\vendor\yt-dlp\yt-dlp.exe" Link="yt-dlp.exe"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <None Include="..\..\vendor\yt-dlp\licenses\*" Link="licenses\%(Filename)%(Extension)"

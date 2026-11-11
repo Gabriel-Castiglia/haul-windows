@@ -44,7 +44,7 @@ public partial class MainWindow : Window
         AplicarTextos();
         Loc.Cambio += AplicarTextos;
 
-        Loaded += (_, _) => Arrancar();
+        Loaded += (_, _) => { Arrancar(); if (!App.Captura) BuscarVersion(); };
         Activated += (_, _) => cola.TomarDelPortapapeles();
         Closing += (_, _) => GuardarVentana();
         SourceInitialized += (_, _) =>
@@ -67,12 +67,25 @@ public partial class MainWindow : Window
         }
     }
 
-    // Follows accent color and theme changes made in Windows Settings while the app is open.
+    // "As Windows": follows a change between light and dark made in Windows Settings while the app is open.
     private IntPtr Mensajes(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        const int WM_SETTINGCHANGE = 0x001A, WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320;
-        if (msg is WM_SETTINGCHANGE or WM_DWMCOLORIZATIONCOLORCHANGED) Acento.Aplicar();
+        const int WM_SETTINGCHANGE = 0x001A;
+        if (msg == WM_SETTINGCHANGE && Ajustes.Datos.Apariencia == Tema.Auto && Tema.SistemaOscuro() != Tema.EsOscuro) Tema.Aplicar();
         return IntPtr.Zero;
+    }
+
+    private void Tema_Click(object sender, RoutedEventArgs e) => TemaVentana.Mostrar(this);
+
+    // Once a day, if the option is on, asks GitHub whether there is a newer version (a little after the start).
+    private async void BuscarVersion()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(20));
+        if (!Ajustes.Datos.BuscarVersiones || DateTime.UtcNow - Ajustes.Datos.UltimaBusqueda < TimeSpan.FromHours(24)) return;
+        Ajustes.Datos.UltimaBusqueda = DateTime.UtcNow;
+        Ajustes.Guardar();
+        var nueva = await Versiones.MasNuevaAsync();
+        if (nueva != null && IsVisible) AcercaDe.AvisarVersion(this, nueva);
     }
 
     private void AplicarTextos()
@@ -80,6 +93,8 @@ public partial class MainWindow : Window
         SelectorIdioma.SelectedIndex = Actual == Idioma.Es ? 1 : 0;
         SelectorIdioma.ToolTip = tr("Idioma", "Language");
         BotonAcercaDe.ToolTip = tr("Acerca de Haul", "About Haul");
+        BotonTema.ToolTip = tr("Apariencia y color", "Appearance and colour");
+        System.Windows.Automation.AutomationProperties.SetName(BotonTema, (string)BotonTema.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(BotonAcercaDe, (string)BotonAcercaDe.ToolTip);
         Sugerencia.Text = tr("Pegá uno o varios enlaces, uno por línea", "Paste one or more links, one per line");
         BotonBorrar.Content = tr("Borrar", "Clear");
