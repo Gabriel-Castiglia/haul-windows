@@ -2,6 +2,14 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.7.1 - 2026-11-20
+
+### Fixed
+
+- A saved queue that could not be read when Haul opened (the file held by another program) was then written over:
+  the first save of the empty queue deleted it. Haul now leaves that file alone for the session, so the queue comes
+  back the next time.
+
 ## 1.7.0 - 2026-11-20
 
 ### Added

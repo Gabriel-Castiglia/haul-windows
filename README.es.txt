@@ -1,7 +1,7 @@
 Haul para Windows
 =================
 
-Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.0 · GPL-2.0-only · hecho y probado con
+Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.1 · GPL-2.0-only · hecho y probado con
 yt-dlp 2026.08.19
 
 English (README.txt) · Español

@@ -1,7 +1,7 @@
 Haul for Windows
 ================
 
-Gabriel Castiglia · November 20, 2026 · version 1.7.0 · GPL-2.0-only · built and tested with yt-dlp
+Gabriel Castiglia · November 20, 2026 · version 1.7.1 · GPL-2.0-only · built and tested with yt-dlp
 2026.08.19
 
 English · Español (README.es.txt)

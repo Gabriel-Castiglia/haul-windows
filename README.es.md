@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-es.png" width="420" alt="La ventana de Haul, oscura"></p>
 
-Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.0 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.1 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 

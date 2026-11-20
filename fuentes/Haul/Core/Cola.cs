@@ -272,7 +272,13 @@ public sealed partial class Cola : Observable
         bool danado;
         EstadoCola estado;
         try { estado = ColaGuardada.Cargar(archivo, out danado); }
-        catch { estado = new EstadoCola(); danado = false; }   // unreadable for now (locked): nothing is lost
+        catch
+        {
+            // Unreadable for now (locked by another program): the file is left alone for this session. Saving into it
+            // would replace the queue it holds with this empty one, or delete it.
+            Restaurar(new EstadoCola(), arrancar);
+            return true;
+        }
         Restaurar(estado, arrancar);
         archivoGuardado = archivo;
         return !danado;
