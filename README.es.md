@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-es.png" width="420" alt="La ventana de Haul, oscura"></p>
 
-Gabriel Castiglia · 11 de noviembre de 2026 · versión 1.6.0 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.0 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 
@@ -56,7 +56,8 @@ Ejecutar un `haul-setup.exe` más nuevo actualiza el Haul instalado y conserva l
 usuario. Si Haul está abierto, el programa de instalación lo cierra antes de reemplazar sus archivos.
 Una instalación hecha con los scripts de la versión 1.4 o anteriores (en
 `%LOCALAPPDATA%\Programs\Haul`) se quita, conservando sus ajustes, para que quede un solo Haul. Una
-versión más vieja no se puede instalar encima de una más nueva.
+versión más vieja no se puede instalar encima de una más nueva. Haul también se puede actualizar solo:
+ver [Actualizaciones](#actualizaciones).
 
 Los archivos no están firmados con un certificado comercial, así que la primera vez Windows
 SmartScreen puede mostrar «Windows protegió su PC». «Más información» → «Ejecutar de todas formas» los
@@ -90,6 +91,14 @@ o canceladas se pueden reintentar o quitar. Una descarga cancelada borra los arc
 había creado; los que ya estaban en la carpeta, como una descarga anterior del mismo video en otro
 formato, no se tocan nunca.
 
+La cola sobrevive al cierre de Haul: lo que está en cola, en pausa o con error, y los enlaces que
+faltaba agregar, vuelven la próxima vez que se abre, en el mismo orden. Una descarga que estaba en curso
+al cerrar vuelve a la cola y sigue desde sus archivos a medias; una lista que se estaba leyendo se lee
+de nuevo. Las terminadas y las canceladas no se guardan. La cola se guarda en
+`%APPDATA%\Haul\queue.json`, siempre a través de un archivo temporal que después reemplaza al anterior,
+así que un corte nunca deja medio archivo; un archivo dañado se aparta como `queue.damaged.json` y Haul
+arranca con la cola vacía.
+
 Cada fila se puede pausar con su botón de pausa y seguir con el de reproducir; mientras tanto, los
 archivos a medias quedan en el disco y la descarga retoma donde quedó. «Pausar todo», arriba de la
 cola, frena la cola entera: la descarga en curso se detiene y espera primera en la fila hasta «Seguir
@@ -103,8 +112,10 @@ así yt-dlp sigue desde donde quedó. Cuando una descarga termina, la aplicació
 archivos intermedios que yt-dlp no pudo quitar, como el audio original de un MP3 mientras un cliente
 de sincronización de archivos lo tenía abierto.
 
-La casilla «Limpiar terminadas automáticamente», debajo del formato, está siempre a la vista, aunque
-la cola esté vacía. Mientras está marcada, cada descarga que termina o se cancela
+«Bajar listas enteras», «Descargar instrumentales» y «Limpiar terminadas automáticamente» están en
+«Opciones», debajo del botón Descargar. La línea viene plegada, para dejarle lugar a la cola, y nombra
+las opciones activas; un clic la abre, y Haul recuerda si quedó abierta. Mientras «Limpiar terminadas
+automáticamente» está marcada, cada descarga que termina o se cancela
 sale sola de la lista y el resumen la sigue contando; las que fallaron quedan, para poder reintentarlas.
 Al marcarla también se limpia lo que ya había terminado. La aplicación recuerda la elección.
 
@@ -113,10 +124,10 @@ Los videos con «instrumental» en el título esperan en la cola, en pausa, salv
 marcar la opción se reanudan todas.
 
 El botón ⓘ de la ventana muestra la versión, qué significa el nombre, el autor, la licencia y el
-enlace a este repositorio, en el idioma de la interfaz. El botón de la paleta, al lado, abre la
-ventana de apariencia.
-Desde el encabezado hasta el botón Descargar todo queda fijo; solo la cola se desplaza, así que
-agregar enlaces nunca mueve la ventana.
+enlace a este repositorio, en el idioma de la interfaz, y los ajustes de actualización (ver
+[Actualizaciones](#actualizaciones)). El botón de la paleta, al lado, abre la ventana de apariencia.
+Desde el encabezado hasta las opciones todo queda fijo; solo la cola se desplaza, así que agregar
+enlaces nunca mueve la ventana.
 
 También se puede iniciar con enlaces desde una terminal o un acceso directo:
 
@@ -155,11 +166,11 @@ Se prefiere H.264 porque cualquier reproductor de Windows lo abre. Los archivos 
 | Ruta | Contenido |
 |---|---|
 | `fuentes/Haul/` | Código de la aplicación (C#, WPF sobre .NET 10) |
-| `fuentes/Haul/Core/` | Cola, listas, enlaces, preferencias y el proceso de yt-dlp |
+| `fuentes/Haul/Core/` | Cola y su copia guardada, listas, enlaces, preferencias, actualizaciones y el proceso de yt-dlp |
 | `assets/` | El grabado del que sale el ícono |
 | `scripts/make_icon.py` | Dibuja el ícono en sus doce colores (Python 3 con numpy, opencv-python, scipy y Pillow); el mismo script hace el ícono de la versión de macOS |
 | `icono/Haul.ico`, `icono/icono-256.png`, `icono/icono-1024.png`, `icono/accents/` | El ícono, en su naranja de siempre y en cada color |
-| `scripts/screenshots.ps1` | Dibuja las imágenes de la ventana en `docs/images` |
+| `scripts/screenshots.ps1` | Dibuja las imágenes de la ventana en `docs/images`, con datos de ejemplo |
 | `installer/Msi/` | El paquete MSI (WiX) |
 | `installer/SetupUI/` | La ventana de instalación, en inglés y en castellano (.NET Framework 4.7.2, WPF), que además ejecuta winget |
 | `installer/Setup/` | El programa de instalación que lleva la ventana y el MSI (paquete de WiX) |
@@ -194,9 +205,12 @@ versión se fija en un solo lugar, `fuentes\Haul\Haul.csproj`.
 
 ## Ventana y tema
 
-La ventana no se puede achicar por debajo de 560 × 720, así que su contenido siempre se lee; por
-debajo de esa altura la cola se desplaza, mientras todo lo de arriba queda fijo. El tamaño y la
-posición se recuerdan entre sesiones.
+La ventana es compacta, así que la cola tiene lugar para varias filas aun en una pantalla de 1366 × 768
+o 1280 × 720 con Windows al 125 % o al 150 %: la carpeta de destino y el botón Descargar comparten una
+línea, y las opciones se pliegan. No se puede achicar por debajo de 560 × 420. Cuando la ventana es tan
+baja que a la cola le quedaría lugar para menos de dos filas, la parte de arriba se desplaza junto con
+la cola en vez de aplastarla, y vuelve a su lugar fijo cuando la ventana crece. El tamaño y la posición
+se recuerdan entre sesiones.
 
 La aplicación usa el tema Fluent de Windows 11, claro, oscuro o como Windows (lo que esté elegido para
 las aplicaciones en Configuración > Personalización > Colores, y lo sigue con la aplicación abierta).
@@ -209,13 +223,37 @@ Windows.
 
 ![La ventana de apariencia](docs/images/theme-es.png)
 
-## Versiones nuevas
+## Actualizaciones
 
-Una vez por día, Haul le pregunta a GitHub el número de la última versión. Si es más nueva, una ventana
-chica lo avisa y ofrece abrir la página de descarga; Haul nunca baja ni instala una versión nueva por su
-cuenta. La consulta no lleva más que el nombre del programa y su versión. La ventana ⓘ la apaga
-(«Avisar cuando haya una versión nueva») y pregunta cuando se quiera («Buscar versión nueva»).
+**Haul.** Una vez por día (y cada vez que se aprieta «Buscar actualizaciones» en la ventana ⓘ) Haul le
+pregunta a GitHub por su última versión. Si es más nueva, una ventana chica pregunta una sola vez:
+«Actualizar ahora», «Ver novedades» (abre la página de la versión) o «Más tarde».
 
+![La pregunta por una versión nueva](docs/images/update-es.png)
+
+Con «Actualizar ahora» todo pasa solo: Haul descarga `haul-setup.exe` de la versión y lo compara con
+el `SHA256SUMS.txt` de la versión; un archivo que no coincide se borra y no se ejecuta nunca. Si hay
+una descarga en curso, Haul pregunta antes si actualizar ahora (la descarga se detiene y sigue desde
+sus archivos a medias cuando Haul vuelve) o cuando termine la cola. Después guarda la cola, se cierra
+y ejecuta el programa de instalación en silencio, conservando el idioma elegido al instalar; Windows
+pide permiso, porque Haul se instala para todos los usuarios. El programa de instalación espera a que
+Haul se cierre, instala y vuelve a abrir Haul con su cola. Si la instalación no se hizo (por ejemplo,
+porque se negó el permiso), el Haul que se abre lo dice. La consulta a GitHub no lleva más que el
+nombre del programa y su versión. La ventana ⓘ apaga la búsqueda diaria.
+
+La actualización silenciosa es del propio programa de instalación: `haul-setup.exe /quiet /norestart
+/HAULWAITPID=<pid> /HAULRELAUNCH=1` espera a que termine ese proceso y abre Haul al final. No toca
+FFmpeg ni Deno; ejecutar `haul-setup.exe` a mano los actualiza.
+
+**yt-dlp.** Los sitios cambian seguido, así que Haul también puede traer un yt-dlp más nuevo que el que
+vino al instalarlo. Una vez por día (si en la ventana ⓘ está marcada «Actualizar yt-dlp solo», como
+viene) y cada vez que se aprieta «Actualizar yt-dlp» ahí, Haul le pregunta a GitHub por la última
+versión oficial de yt-dlp. Una más nueva se descarga en `%LOCALAPPDATA%\Haul\yt-dlp\<versión>\`, se
+compara con el `SHA2-256SUMS` de la versión y se ejecuta una vez para confirmar su número de versión;
+recién entonces Haul empieza a usarla, y la línea de abajo de la ventana dice «actualizado por Haul».
+Una descarga que ya estaba en curso termina con la copia con la que empezó; las siguientes usan la
+nueva. La copia que vino con Haul no se cambia nunca y se vuelve a usar si no hay una copia comprobada
+más nueva; las copias descargadas más viejas se borran al abrir Haul.
 ## Mantenimiento
 
 Haul está hecho y probado con yt-dlp 2026.08.19, y esa copia exacta viene con la aplicación. Una
@@ -237,9 +275,9 @@ Los errores más comunes de yt-dlp se muestran en palabras simples en el idioma 
 no disponible, video privado, sitio no soportado, lista inexistente, sin conexión); el resto aparece
 tal como lo escribe yt-dlp.
 
-Las preferencias (idioma, carpeta, formato, tamaño de la ventana, apariencia, color, «Limpiar terminadas
-automáticamente», «Descargar instrumentales» y el aviso de versiones nuevas) se guardan en
-`%APPDATA%\Haul\settings.json`. Borrar ese archivo las devuelve a su valor inicial.
+Las preferencias (idioma, carpeta, formato, tamaño de la ventana, apariencia, color, las opciones y si
+están plegadas, y los ajustes de actualización) se guardan en `%APPDATA%\Haul\settings.json`, y la cola
+en `%APPDATA%\Haul\queue.json`. Borrar ese archivo las devuelve a su valor inicial.
 
 ## Notas técnicas
 

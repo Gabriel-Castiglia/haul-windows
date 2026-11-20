@@ -41,18 +41,36 @@ public partial class MainWindow : Window
         };
 
         RestaurarVentana();
+        BotonOpciones.IsChecked = Ajustes.Datos.OpcionesAbiertas;
+        MostrarOpciones();
+        cola.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(Cola.ListaEntera) or nameof(Cola.Instrumentales) or nameof(Cola.LimpiarSola)) MostrarOpciones();
+        };
+        // A window too low for the queue: the panel above it scrolls with the queue (see Acomodar).
+        SizeChanged += (_, _) => Acomodar();
+        PanelSuperior.SizeChanged += (_, _) => Acomodar();
+        // The picture for the README shows the whole example queue.
+        if (App.Captura) Height = 720;
         AplicarTextos();
         Loc.Cambio += AplicarTextos;
 
-        Loaded += (_, _) => { Arrancar(); if (!App.Captura) BuscarVersion(); };
-        Activated += (_, _) => cola.TomarDelPortapapeles();
-        Closing += (_, _) => GuardarVentana();
+        Loaded += (_, _) => { Arrancar(); if (!App.Captura) Comprobaciones(); };
+        Activated += (_, _) => { if (!App.Captura) cola.TomarDelPortapapeles(); };
+        Closing += (_, _) => { if (App.Captura) return; GuardarVentana(); cola.Cerrar(); };
+        Herramientas.CambioYtDlp += () => Dispatcher.BeginInvoke(ActualizarPie);
         SourceInitialized += (_, _) =>
             HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(Mensajes);
     }
 
     private void Arrancar()
     {
+        if (App.Captura) { cola.Ejemplo(); return; }
+        // The queue left when Haul last closed comes back first; a download that was running starts again from
+        // its partial files.
+        if (!cola.Abrir(ColaGuardada.Archivo))
+            MostrarEstado(tr("La cola guardada estaba dañada y se apartó como queue.damaged.json",
+                             "The saved queue was damaged and was set aside as queue.damaged.json"));
         // Launching with links from a terminal or a shortcut:
         //   Haul.exe --descargar URL [URL…]
         int i = Array.IndexOf(argumentos, "--descargar");
@@ -77,16 +95,59 @@ public partial class MainWindow : Window
 
     private void Tema_Click(object sender, RoutedEventArgs e) => TemaVentana.Mostrar(this);
 
-    // Once a day, if the option is on, asks GitHub whether there is a newer version (a little after the start).
-    private async void BuscarVersion()
+    // ---- Room for the queue ----
+
+    // The queue should always show at least two rows. When the window is too low for that with the panel above it
+    // fixed (a small screen, a large Windows scale), the panel moves into the scrolling area and scrolls away with
+    // the queue; when there is room again it goes back. The two thresholds keep it from flickering at the edge.
+    private const double MinimoCola = 190, HolguraCola = 30;
+
+    private void Acomodar()
     {
-        await Task.Delay(TimeSpan.FromSeconds(20));
-        if (!Ajustes.Datos.BuscarVersiones || DateTime.UtcNow - Ajustes.Datos.UltimaBusqueda < TimeSpan.FromHours(24)) return;
-        Ajustes.Datos.UltimaBusqueda = DateTime.UtcNow;
-        Ajustes.Guardar();
-        var nueva = await Versiones.MasNuevaAsync();
-        if (nueva != null && IsVisible) AcercaDe.AvisarVersion(this, nueva);
+        if (Content is not FrameworkElement raiz || !IsLoaded) return;
+        double libre = raiz.ActualHeight - Cabecera.ActualHeight - Cabecera.Margin.Top - Cabecera.Margin.Bottom - PanelSuperior.ActualHeight;
+        bool movido = ZonaMovil.Content == PanelSuperior;
+        if (!movido && libre < MinimoCola)
+        {
+            ZonaFija.Content = null;
+            PanelSuperior.Margin = new Thickness(0, 0, 0, 6);
+            ZonaMovil.Content = PanelSuperior;
+        }
+        else if (movido && libre >= MinimoCola + HolguraCola)
+        {
+            ZonaMovil.Content = null;
+            PanelSuperior.Margin = new Thickness(20, 0, 20, 0);
+            ZonaFija.Content = PanelSuperior;
+        }
     }
+
+    // ---- Options panel ----
+
+    private void Opciones_Cambio(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        Ajustes.Datos.OpcionesAbiertas = BotonOpciones.IsChecked == true;
+        Ajustes.Guardar();
+        MostrarOpciones();
+    }
+
+    // Folded, the line lists the options that are on, so nothing is hidden from view.
+    private void MostrarOpciones()
+    {
+        bool abierto = BotonOpciones.IsChecked == true;
+        PanelOpciones.Visibility = abierto ? Visibility.Visible : Visibility.Collapsed;
+        FlechaOpciones.Text = abierto ? "\uE70D" : "\uE76C";
+        var activas = new List<string>();
+        if (!abierto)
+        {
+            if (cola.ListaEntera) activas.Add(tr("listas enteras", "whole playlists"));
+            if (cola.Instrumentales) activas.Add(tr("instrumentales", "instrumentals"));
+            if (cola.LimpiarSola) activas.Add(tr("limpiar terminadas", "clear finished"));
+        }
+        TextoOpciones.Text = tr("Opciones", "Options") + (activas.Count > 0 ? ": " + string.Join(" · ", activas) : "");
+        System.Windows.Automation.AutomationProperties.SetName(BotonOpciones, tr("Opciones", "Options"));
+    }
+
 
     private void AplicarTextos()
     {
@@ -122,16 +183,17 @@ public partial class MainWindow : Window
         OpcionLimpiar.ToolTip = tr("Activado, cada descarga terminada sale sola de la lista",
                                    "When on, every finished download leaves the list by itself");
         OpcionInstrumentales.Content = tr("Descargar instrumentales", "Download instrumentals");
+        MostrarOpciones();
         OpcionInstrumentales.ToolTip = tr("Desactivado, los videos con «instrumental» en el título esperan en pausa",
                                           "When off, videos with \"instrumental\" in the title wait, paused");
-        Pie.Text = tr($"Haul {Herramientas.VersionHaul} · Motor: yt-dlp {Herramientas.VersionYtDlp}, incluido en la app",
-                      $"Haul {Herramientas.VersionHaul} · Engine: yt-dlp {Herramientas.VersionYtDlp}, bundled with the app");
+        ActualizarPie();
 
         var faltan = new List<string>();
         if (!Herramientas.YtDlpPresente) faltan.Add("yt-dlp.exe");
         if (Herramientas.Ffmpeg == null) faltan.Add("ffmpeg");
         if (Herramientas.Deno == null) faltan.Add("deno");
-        AvisoFaltantes.Visibility = faltan.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // The pictures for the README never show what this computer lacks.
+        AvisoFaltantes.Visibility = faltan.Count > 0 && !App.Captura ? Visibility.Visible : Visibility.Collapsed;
         TextoFaltantes.Text = tr(
             $"Falta {string.Join(", ", faltan)}. Volvé a ejecutar haul-setup.exe, que instala FFmpeg y Deno con winget.",
             $"{string.Join(", ", faltan)} missing. Run haul-setup.exe again; it installs FFmpeg and Deno with winget.");

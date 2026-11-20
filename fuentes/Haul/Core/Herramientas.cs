@@ -21,15 +21,31 @@ namespace Haul.Core;
 // Locates the bundled yt-dlp and the external tools it needs (ffmpeg and deno).
 public static class Herramientas
 {
-    // yt-dlp ships next to Haul.exe, pinned to the version it was tested with.
-    public static readonly string RutaYtDlp = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
+    // yt-dlp ships next to Haul.exe, pinned to the version it was tested with. A newer copy that Haul downloaded
+    // and checked (MotorYtDlp) takes its place while it exists; new processes always start the one in use.
+    public static readonly string RutaYtDlpIncluido = Path.Combine(AppContext.BaseDirectory, "yt-dlp.exe");
+    public static string RutaYtDlp { get; private set; } = RutaYtDlpIncluido;
     // Haul's yt-dlp extractor plugin (plugins\haul in the repository), for links the pinned
     // version does not handle on its own.
     public static readonly string RutaComplementos = Path.Combine(AppContext.BaseDirectory, "plugins");
 
-    public static readonly string VersionYtDlp =
+    public static readonly string VersionYtDlpIncluido =
         typeof(Herramientas).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(a => a.Key == "YtDlpVersion")?.Value ?? "?";
+    public static string VersionYtDlp { get; private set; } = VersionYtDlpIncluido;
+
+    // Whether the yt-dlp in use is a copy downloaded by Haul rather than the one installed with it.
+    public static bool YtDlpActualizado => !string.Equals(RutaYtDlp, RutaYtDlpIncluido, StringComparison.OrdinalIgnoreCase);
+
+    // Raised (on any thread) when another copy of yt-dlp starts being used.
+    public static event Action? CambioYtDlp;
+
+    public static void UsarYtDlp(string ruta, string version)
+    {
+        RutaYtDlp = ruta;
+        VersionYtDlp = version;
+        CambioYtDlp?.Invoke();
+    }
 
     public static readonly string VersionHaul =
         typeof(Herramientas).Assembly.GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";

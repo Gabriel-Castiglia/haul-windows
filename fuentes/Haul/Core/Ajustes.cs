@@ -63,19 +63,25 @@ public static class Ajustes
         public bool LimpiarSola { get; set; }
         public bool Instrumentales { get; set; }
         public bool ListaEntera { get; set; } = true;
+        // The options under the Download button: folded (the default, more room for the queue) or open.
+        public bool OpcionesAbiertas { get; set; }
         // "auto" (as Windows), "light" or "dark". A settings file from before 1.6 has none and keeps the dark
         // window it had; a new installation follows Windows.
         public string? Apariencia { get; set; }
         // Accent colour: the key of one of Tema.Colores.
         public string? Color { get; set; }
-        // Once a day Haul asks GitHub whether there is a newer version, and says so if there is.
+        // Once a day Haul asks GitHub whether there is a newer version and, if there is, offers to install it.
         public bool BuscarVersiones { get; set; } = true;
         public DateTime UltimaBusqueda { get; set; }
+        // Once a day Haul asks GitHub for yt-dlp's latest release and, if it is newer, installs it by itself.
+        public bool ActualizarYtDlp { get; set; } = true;
+        public DateTime UltimaBusquedaYtDlp { get; set; }
     }
 
-    public static readonly string Carpeta =
+    // The test option --datos points it to a throw-away folder (App.xaml.cs).
+    public static string Carpeta { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Haul");
-    private static readonly string Archivo = Path.Combine(Carpeta, "settings.json");
+    private static string Archivo => Path.Combine(Carpeta, "settings.json");
 
     private static readonly JsonSerializerOptions Opciones = new()
     {
@@ -86,11 +92,13 @@ public static class Ajustes
 
     public static Valores Datos { get; private set; } = new();
 
-    public static void Cargar()
+    // Without "desdeArchivo" (the test pictures) the defaults are used and nothing is read.
+    public static void Cargar(bool desdeArchivo = true)
     {
         try
         {
-            if (File.Exists(Archivo))
+            if (!desdeArchivo) Datos = new();
+            else if (File.Exists(Archivo))
             {
                 Datos = JsonSerializer.Deserialize<Valores>(File.ReadAllText(Archivo), Opciones) ?? new();
                 Datos.Apariencia ??= "dark";
@@ -116,7 +124,9 @@ public static class Ajustes
         try
         {
             Directory.CreateDirectory(Carpeta);
-            File.WriteAllText(Archivo, JsonSerializer.Serialize(Datos, Opciones));
+            // A temporary file replaces the old one, so a crash never leaves half a settings file.
+            File.WriteAllText(Archivo + ".tmp", JsonSerializer.Serialize(Datos, Opciones));
+            File.Move(Archivo + ".tmp", Archivo, overwrite: true);
         }
         catch
         {

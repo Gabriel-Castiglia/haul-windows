@@ -21,19 +21,42 @@ public partial class App : Application
     // Test option (not shown to users): "--captura <file.png>" draws a window into a PNG and exits, without
     // writing the settings; "--ventana main|tema|acerca|aviso" picks the window, and "--idioma en|es",
     // "--tema light|dark" and "--color <key>" override the stored language, appearance and colour.
+    // The pictures use the default settings, an example queue and no clipboard, so they show nothing of the
+    // computer they were drawn on.
     public static bool Captura { get; private set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        Ajustes.Cargar();
         string? Opcion(string nombre)
         {
             int i = Array.IndexOf(e.Args, nombre);
             return i >= 0 && i + 1 < e.Args.Length ? e.Args[i + 1] : null;
         }
+
+        // Test option (not shown to users): "--self-test <log>" checks the saved queue, the version logic and the
+        // checksums with throw-away data in a temporary folder, writes the results to <log> and exits with the
+        // number of failures. No window is shown and the user's settings and queue are never read or written.
+        // "--red" adds the checks that need GitHub.
+        if (Opcion("--self-test") is string registro)
+        {
+            Ajustes.SoloLectura = true;
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Shutdown(PruebaPropia.Ejecutar(registro, e.Args.Contains("--red")));
+            return;
+        }
+
+        // Test option (not shown to users): "--datos <folder>" keeps the settings, the queue and the copies of yt-dlp
+        // in that folder instead of the user's, to try Haul with throw-away data.
+        if (Opcion("--datos") is string datos)
+        {
+            Ajustes.Carpeta = System.IO.Path.Combine(System.IO.Path.GetFullPath(datos), "config");
+            MotorYtDlp.Raiz = System.IO.Path.Combine(System.IO.Path.GetFullPath(datos), "yt-dlp");
+        }
+
         var archivo = Opcion("--captura");
         Captura = archivo != null;
+        Ajustes.Cargar(desdeArchivo: !Captura);
         if (Captura)
         {
             Ajustes.SoloLectura = true;
@@ -52,6 +75,14 @@ public partial class App : Application
                 "aviso" => AcercaDe.Aviso(new Version(Versiones.Actual.Major, Versiones.Actual.Minor + 1, 0)),
                 _ => new MainWindow(Array.Empty<string>()),
             };
+            // "--tamano 640x576" sets the window's size (in device-independent pixels), to see how it fits small screens.
+            if (Opcion("--tamano")?.Split('x') is [var ancho, var alto]
+                && double.TryParse(ancho, System.Globalization.CultureInfo.InvariantCulture, out var an)
+                && double.TryParse(alto, System.Globalization.CultureInfo.InvariantCulture, out var al))
+            {
+                w.Width = an;
+                w.Height = al;
+            }
             w.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             w.ContentRendered += (_, _) => Dispatcher.BeginInvoke(() => { GuardarCaptura(w, archivo!); Shutdown(); },
@@ -59,6 +90,7 @@ public partial class App : Application
             w.Show();
             return;
         }
+        MotorYtDlp.Iniciar();
         var ventana = new MainWindow(e.Args);
         MainWindow = ventana;
         ventana.Show();

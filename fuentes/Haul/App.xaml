@@ -63,7 +63,7 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="RadioButton">
-                            <Border x:Name="Marco" CornerRadius="12" BorderThickness="1" Padding="10"
+                            <Border x:Name="Marco" CornerRadius="12" BorderThickness="1" Padding="8"
                                     Background="Transparent"
                                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                                 <Grid>
@@ -71,9 +71,9 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Border x:Name="Azulejo" Width="38" Height="38" CornerRadius="9"
+                                    <Border x:Name="Azulejo" Width="32" Height="32" CornerRadius="8"
                                             Background="{DynamicResource SubtleFillColorSecondaryBrush}">
-                                        <TextBlock x:Name="Icono" Style="{StaticResource Glifo}" FontSize="18"
+                                        <TextBlock x:Name="Icono" Style="{StaticResource Glifo}" FontSize="16"
                                                    HorizontalAlignment="Center"
                                                    Foreground="{DynamicResource AcentoBrush}"
                                                    Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -89,7 +89,7 @@
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="Marco" Property="BorderBrush" Value="{DynamicResource DegradeBrush}" />
                                     <Setter TargetName="Marco" Property="BorderThickness" Value="2" />
-                                    <Setter TargetName="Marco" Property="Padding" Value="9" />
+                                    <Setter TargetName="Marco" Property="Padding" Value="7" />
                                     <Setter TargetName="Marco" Property="Background" Value="Transparent" />
                                     <Setter TargetName="Azulejo" Property="Background" Value="{DynamicResource DegradeBrush}" />
                                     <Setter TargetName="Icono" Property="Foreground" Value="{DynamicResource TextoSobreAcentoBrush}" />
@@ -106,10 +106,11 @@
                 <Setter Property="Foreground" Value="{DynamicResource TextoSobreAcentoBrush}" />
                 <Setter Property="FontSize" Value="15" />
                 <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Padding" Value="22,0" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border x:Name="Pastilla" CornerRadius="22" Padding="0,12"
+                            <Border x:Name="Pastilla" CornerRadius="22" Padding="{TemplateBinding Padding}"
                                     Background="{DynamicResource DegradeBrush}">
                                 <Border.Effect>
                                     <DropShadowEffect x:Name="Sombra" BlurRadius="12" ShadowDepth="3" Opacity="0.3"
@@ -151,6 +152,33 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Fondo" Property="Background"
+                                            Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Flat line that folds and unfolds a panel (the options under the Download button). -->
+            <Style x:Key="BotonPliegue" TargetType="ToggleButton">
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="Fondo" CornerRadius="6" Padding="6,4" Background="Transparent">
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Fondo" Property="Background"
+                                            Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
                                     <Setter TargetName="Fondo" Property="Background"
                                             Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
                                 </Trigger>

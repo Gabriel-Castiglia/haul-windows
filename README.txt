@@ -1,7 +1,7 @@
 Haul for Windows
 ================
 
-Gabriel Castiglia · November 11, 2026 · version 1.6.0 · GPL-2.0-only · built and tested with yt-dlp
+Gabriel Castiglia · November 20, 2026 · version 1.7.0 · GPL-2.0-only · built and tested with yt-dlp
 2026.08.19
 
 English · Español (README.es.txt)
@@ -52,7 +52,8 @@ first time.
 Running a newer haul-setup.exe updates an installed Haul and keeps each user's settings. If Haul is
 running, setup closes it before replacing its files. An installation made with the scripts of
 version 1.4 or earlier (in %LOCALAPPDATA%\Programs\Haul) is removed, keeping its settings, so only
-one Haul remains. An older version cannot be installed over a newer one.
+one Haul remains. An older version cannot be installed over a newer one. Haul can also update
+itself: see Updates (#updates).
 
 The files are not signed with a commercial certificate, so the first time Windows SmartScreen may
 show "Windows protected your PC". "More info" → "Run anyway" opens them. The SHA256SUMS.txt file of
@@ -85,6 +86,14 @@ it offers to show the file in File Explorer or open it. Failed or cancelled down
 or removed. A cancelled download deletes the partial files it had created; files that were already
 in the folder, such as an earlier download of the same video in another format, are never touched.
 
+The queue survives closing Haul: what is queued, paused or failed, and the links still waiting to be
+added, come back the next time it opens, in the same order. A download that was running when Haul
+closed comes back queued and carries on from its partial files; a playlist that was being read is
+read again. Finished and cancelled rows are not kept. The queue is saved in
+%APPDATA%\Haul\queue.json, always through a temporary file that then replaces the old one, so a
+crash never leaves half a file; a damaged file is set aside as queue.damaged.json and Haul starts
+with an empty queue.
+
 Any row can be paused with its pause button and continued with its play button; the partial files
 stay on disk meanwhile, so the download picks up where it stopped. "Pause all", above the queue,
 holds the whole queue: the running download stops and waits first in line until "Resume all". "Retry
@@ -96,19 +105,22 @@ attempt is running ("Retry 2/4"). Partial files are kept between attempts, so yt
 it stopped. When a download finishes, the app also deletes the intermediate files yt-dlp could not
 remove by itself, such as the original audio of an MP3 while a file sync client held it open.
 
-The "Clear finished automatically" checkbox, below the format, is always in view, even with an empty
-queue. While it is checked, every download that finishes or is cancelled leaves the list by itself,
-and the summary keeps counting it; failed ones stay, so they can be retried. Checking it also clears
-what had already finished. The app remembers the setting.
+"Download whole playlists", "Download instrumentals" and "Clear finished automatically" are under
+"Options", below the Download button. The line is folded by default, to leave room for the queue,
+and lists the options that are on; a click opens it, and Haul remembers whether it was left open.
+While "Clear finished automatically" is checked, every download that finishes or is cancelled leaves
+the list by itself, and the summary keeps counting it; failed ones stay, so they can be retried.
+Checking it also clears what had already finished. The app remembers the setting.
 
 Videos with "instrumental" in the title wait in the queue, paused, unless "Download instrumentals"
 is checked. A paused row can be downloaded on its own with its download button, and checking the
 option resumes all of them.
 
 The ⓘ button in the window shows the version, the meaning of the name, the author, the license and
-the link to this repository, in the interface language. The button with the palette, next to it,
-opens the appearance window. Everything from the header down to the Download button stays fixed;
-only the queue scrolls, so adding links never moves the window.
+the link to this repository, in the interface language, and the update settings (see
+Updates (#updates)). The button with the palette, next to it, opens the appearance window.
+Everything from the header down to the options stays fixed; only the queue scrolls, so adding links
+never moves the window.
 
 The app can also be started with links from a terminal or a shortcut:
 
@@ -147,11 +159,11 @@ Repository layout
   Path                                                                        Contents
   --------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------
   fuentes/Haul/                                                               App source code (C#, WPF on .NET 10)
-  fuentes/Haul/Core/                                                          Queue, playlists, links, settings and the yt-dlp process
+  fuentes/Haul/Core/                                                          Queue and its saved copy, playlists, links, settings, updates and the yt-dlp process
   assets/                                                                     The engraving the icon comes from
   scripts/make_icon.py                                                        Draws the icon in its twelve colours (Python 3 with numpy, opencv-python, scipy and Pillow); the same script makes the icon of the macOS version
   icono/Haul.ico, icono/icono-256.png, icono/icono-1024.png, icono/accents/   The icon, on its default orange and on each colour
-  scripts/screenshots.ps1                                                     Draws the pictures of the window in docs/images
+  scripts/screenshots.ps1                                                     Draws the pictures of the window in docs/images, with example data
   installer/Msi/                                                              The MSI package (WiX)
   installer/SetupUI/                                                          The setup window, in English and Spanish (.NET Framework 4.7.2, WPF), which also runs winget
   installer/Setup/                                                            The setup program that carries the setup window and the MSI (WiX bundle)
@@ -184,9 +196,12 @@ package. The version is set in one place, fuentes\Haul\Haul.csproj.
 Window and theme
 ----------------
 
-The window cannot be made smaller than 560 × 720, so its contents always stay readable; below that
-height the queue scrolls, while everything above it stays fixed. Size and position are remembered
-between sessions.
+The window is compact, so the queue keeps room for several rows even on a 1366 × 768 or 1280 × 720
+screen with Windows scaled to 125 % or 150 %: the destination folder and the Download button share a
+line, and the options fold away. It cannot be made smaller than 560 × 420. When the window is so low
+that the queue would have room for less than two rows, the part above the queue scrolls together
+with it instead of squeezing it, and goes back to its fixed place when the window grows. Size and
+position are remembered between sessions.
 
 The app uses the Windows 11 Fluent theme, light, dark or as Windows (the setting for apps in
 Settings > Personalization > Colors, followed while the app is open). The palette button in the
@@ -196,13 +211,36 @@ the eagle flies on a tile of that colour. The icon of the Start menu stays orang
 installed for all users and that shortcut belongs to all of them. A settings file from an earlier
 version keeps the dark window it had; a new installation follows Windows.
 
-New versions
-------------
+Updates
+-------
 
-Once a day Haul asks GitHub for the number of the latest version. If it is newer, a small window
-says so and offers to open the download page; Haul never downloads or installs a new version by
-itself. The request carries nothing but the program name and its version. The ⓘ window turns it off
-("Tell me when there is a new version") and asks at any time ("Check for a new version").
+Haul. Once a day (and whenever "Check for updates" is pressed in the ⓘ window) Haul asks GitHub for
+its latest release. If it is newer, a small window asks once: "Update now", "What's new" (opens the
+release page) or "Later".
+
+With "Update now" everything happens by itself: Haul downloads haul-setup.exe from the release and
+checks it against the release's SHA256SUMS.txt; a file that does not match is deleted and never run.
+If a download is running, Haul asks first whether to update now (the download stops and carries on
+from its partial files when Haul comes back) or when the queue ends. Then it saves the queue,
+closes, and runs the setup program in silence, keeping the language chosen at installation; Windows
+asks for permission, because Haul is installed for all users. The setup program waits for Haul to be
+gone, installs, and opens Haul again with its queue. If the installation did not happen (for
+example, because the permission was refused), the Haul that opens says so. The request to GitHub
+carries nothing but the program name and its version. The ⓘ window turns the daily check off.
+
+The silent update is the setup program's own:
+haul-setup.exe /quiet /norestart /HAULWAITPID=<pid> /HAULRELAUNCH=1 waits for that process to end
+and opens Haul at the end. It does not touch FFmpeg and Deno; running haul-setup.exe by hand
+upgrades them.
+
+yt-dlp. Sites change often, so Haul can also bring a newer yt-dlp than the one it was installed
+with. Once a day (if "Update yt-dlp by itself" is on in the ⓘ window, the default) and whenever
+"Update yt-dlp" is pressed there, Haul asks GitHub for yt-dlp's latest official release. A newer one
+is downloaded to %LOCALAPPDATA%\Haul\yt-dlp\<version>\, checked against the release's SHA2-256SUMS,
+and run once to confirm its version number; only then Haul starts using it, and the bottom line of
+the window says "updated by Haul". A download already running finishes with the copy it started
+with; the next ones use the new copy. The copy installed with Haul is never changed and is used
+again whenever no newer checked copy exists; older downloaded copies are removed when Haul starts.
 
 Maintenance
 -----------
@@ -224,9 +262,9 @@ The most common yt-dlp errors are shown in plain words in the interface language
 private video, unsupported site, missing playlist, no connection); anything else appears exactly as
 yt-dlp prints it.
 
-Preferences (language, folder, format, window size, appearance, colour, "Clear finished
-automatically", "Download instrumentals" and the notice of new versions) are stored in
-%APPDATA%\Haul\settings.json. Deleting that file resets them.
+Preferences (language, folder, format, window size, appearance, colour, the options and whether they
+are folded, and the update settings) are stored in %APPDATA%\Haul\settings.json, and the queue in
+%APPDATA%\Haul\queue.json. Deleting that file resets them.
 
 Technical notes
 ---------------

@@ -2,6 +2,41 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.7.0 - 2026-11-20
+
+### Added
+
+- Updates that install themselves. Once a day, or with "Check for updates" in the ⓘ window, Haul asks GitHub
+  for its latest release and, if it is newer, asks once: "Update now", "What's new" or "Later". "Update now"
+  downloads `haul-setup.exe`, checks it against the release's `SHA256SUMS.txt` (a file that does not match is
+  deleted and never run), asks what to do with a running download (update now or when the queue ends), saves
+  the queue, closes Haul, installs in silence keeping the installed language, and opens Haul again.
+- The setup program takes `/HAULWAITPID=<pid>` (waits for that Haul to close before replacing anything) and
+  `/HAULRELAUNCH=1` (opens Haul again at the end, as the user, whether the installation worked or not). A
+  layout (`/layout`) no longer touches an installed Haul or runs winget.
+- yt-dlp updates from the app. Once a day (it can be turned off in the ⓘ window) and with "Update yt-dlp",
+  Haul fetches yt-dlp's latest official release into `%LOCALAPPDATA%\Haul\yt-dlp\<version>`, checks it
+  against `SHA2-256SUMS` and its own version number, and uses it for the next downloads; a running download
+  keeps the copy it started with. The copy installed with Haul stays as it was.
+- The queue survives closing Haul: queued, paused and failed rows and the links still waiting come back in the
+  same order; a download that was running comes back queued and resumes from its partial files. It is saved in
+  `%APPDATA%\Haul\queue.json` through a temporary file; a damaged file is set aside as `queue.damaged.json`.
+- `Haul.exe --self-test <log>` checks the saved queue, the version logic of Haul and yt-dlp and the checksum
+  lists with throw-away data, without a window and without touching the user's settings or queue; the exit
+  code is the number of failures. `--red` adds checks against GitHub, including a real yt-dlp update into the
+  temporary folder.
+
+### Changed
+
+- A more compact main window, so the queue shows several rows on small screens (1366 × 768 or 1280 × 720,
+  with Windows at 125 % or 150 %): smaller header, margins and format cards, the destination and the Download
+  button on one line, and the three options under a folding "Options" line that lists the ones that are on
+  and remembers whether it was left open. The minimum size is now 560 × 420; in a window too low for two rows
+  of the queue, the part above it scrolls with the queue instead of squeezing it.
+- The settings file is also written through a temporary file.
+- The pictures of the README use the default settings and an example queue, never the data of the computer
+  they are drawn on; there is a new one of the question about a new version.
+
 ## 1.6.0 - 2026-11-11
 
 ### Added

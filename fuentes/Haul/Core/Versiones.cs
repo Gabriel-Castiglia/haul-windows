@@ -11,45 +11,42 @@
 //  It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 //
 
-using System.Net.Http;
-using System.Text.Json;
+using System.IO;
 
 namespace Haul.Core;
 
-// Asks GitHub for the latest published version of Haul for Windows. Nothing is sent but the request itself (with
-// "Haul/<version>" as the program name), and nothing is downloaded or installed: the user decides whether to open
-// the download page.
+// The releases of Haul for Windows on GitHub. Nothing is sent but the request itself (with "Haul/<version>" as the
+// program name). Each release carries haul-setup.exe and SHA256SUMS.txt; the update installs that setup program
+// only after checking it against that list (MainWindow.Actualizacion.cs).
 public static class Versiones
 {
-    private const string Api = "https://api.github.com/repos/Gabriel-Castiglia/haul-windows/releases/latest";
-    public const string Pagina = "https://github.com/Gabriel-Castiglia/haul-windows/releases/latest";
+    public const string Repositorio = "Gabriel-Castiglia/haul-windows";
+    public const string Pagina = "https://github.com/" + Repositorio + "/releases/latest";
+    public const string Instalador = "haul-setup.exe";
+    public const string Sumas = "SHA256SUMS.txt";
 
     // The running version, as major.minor.patch.
     public static Version Actual => Version.TryParse(Herramientas.VersionHaul, out var v)
         ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : new Version(0, 0, 0);
 
-    // The latest version on GitHub when it is newer than this one; null if it is not, or if GitHub did not answer.
-    public static async Task<Version?> MasNuevaAsync()
-    {
-        try
-        {
-            var ultima = await UltimaAsync();
-            return ultima != null && ultima > Actual ? ultima : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    // A tag as major.minor.patch ("v1.7.0" → 1.7.0); null if it is not a version.
+    public static Version? DeEtiqueta(string etiqueta) =>
+        Actualizacion.Normalizar(etiqueta) is { } v ? new Version(v.Major, v.Minor, v.Build) : null;
 
-    // The latest published version; throws if GitHub cannot be reached.
-    public static async Task<Version?> UltimaAsync()
-    {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Haul/" + Actual);
-        http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
-        using var doc = JsonDocument.Parse(await http.GetStringAsync(Api));
-        var tag = doc.RootElement.GetProperty("tag_name").GetString()?.TrimStart('v', 'V');
-        return Version.TryParse(tag, out var v) ? new Version(v.Major, v.Minor, Math.Max(0, v.Build)) : null;
-    }
+    // The latest release; throws if GitHub cannot be reached.
+    public static Task<Actualizacion.Lanzamiento> UltimoAsync() => Actualizacion.UltimoAsync(Repositorio);
+
+    // Whether a release is newer than the running Haul.
+    public static bool EsNueva(Actualizacion.Lanzamiento l) => Actualizacion.EsMasNueva(l.Etiqueta, Actual.ToString());
+
+    // The addresses of the setup program and of the checksum list, when the release has both.
+    public static (string instalador, string sumas)? Archivos(Actualizacion.Lanzamiento l) =>
+        l.Archivo(Instalador) is { } i && l.Archivo(Sumas) is { } s ? (i, s) : null;
+
+    // Where the setup program is downloaded before running it.
+    public static string CarpetaDescarga => Path.Combine(Path.GetTempPath(), "HaulUpdate");
+
+    // The version an update was going to install, written just before the setup program runs, so that the Haul
+    // reopened by the setup can tell whether it worked. It lives with the settings.
+    public static string ArchivoPendiente => Path.Combine(Ajustes.Carpeta, "update-pending.txt");
 }

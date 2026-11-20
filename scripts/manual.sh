@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # manual.sh: builds the PDF manuals from the READMEs.
 #   README.md     -> docs/Haul-manual-en.pdf
 #   README.es.md  -> docs/Haul-manual-es.pdf
@@ -13,18 +13,30 @@
 #
 # Also writes README.txt and README.es.txt, the plain-text copies that the installer puts next to
 # Haul.exe for reading on Windows without a Markdown viewer; they are never edited by hand.
-# Runs on macOS. Requires pandoc (brew install pandoc) and Google Chrome, which prints the HTML to PDF.
-# Run it again after every change to either README.
+# Runs on macOS, or on Windows in Git Bash. Requires pandoc (brew install pandoc, winget install pandoc, or
+# PANDOC=<path to pandoc>) and Google Chrome or Microsoft Edge, which prints the HTML to PDF (CHROME=<path> to
+# choose another). Run it again after every change to either README.
 
 set -euo pipefail
-RAIZ="${0:A:h:h}"
+RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RAIZ"
 
 REPO="https://github.com/Gabriel-Castiglia/haul-windows"
-CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+PANDOC="${PANDOC:-pandoc}"
+if [[ -z "${CHROME:-}" ]]; then
+    for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+             "/c/Program Files/Google/Chrome/Application/chrome.exe" \
+             "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"; do
+        [[ -x "$c" ]] && { CHROME="$c"; break; }
+    done
+fi
 
-command -v pandoc >/dev/null || { echo "pandoc is missing: brew install pandoc" >&2; exit 1; }
-[[ -x "$CHROME" ]] || { echo "Google Chrome is missing from /Applications" >&2; exit 1; }
+command -v "$PANDOC" >/dev/null || { echo "pandoc is missing: brew install pandoc (or set PANDOC)" >&2; exit 1; }
+[[ -n "${CHROME:-}" && -x "$CHROME" ]] || { echo "Google Chrome is missing (or set CHROME)" >&2; exit 1; }
+
+# On Windows the programs get Windows paths (C:/...); on macOS paths stay as they are.
+nativo() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
+url() { local p; p="$(nativo "$1")"; [[ "$p" == /* ]] && printf 'file://%s' "$p" || printf 'file:///%s' "$p"; }
 
 TEMPORAL="$(mktemp -d)"
 trap 'rm -rf "$TEMPORAL"' EXIT
@@ -58,16 +70,16 @@ LUA
 generar() {
     local fuente=$1 idioma=$2 titulo=$3 salida=$4
     # Self-contained HTML: stylesheet and icon embedded, no references to local files.
-    pandoc "$fuente" --from gfm --to html5 --standalone --embed-resources \
-        --lua-filter "$TEMPORAL/enlaces.lua" \
+    "$PANDOC" "$fuente" --from gfm --to html5 --standalone --embed-resources \
+        --lua-filter "$(nativo "$TEMPORAL/enlaces.lua")" \
         --css docs/manual.css \
-        --include-before-body "$TEMPORAL/portada.html" \
+        --include-before-body "$(nativo "$TEMPORAL/portada.html")" \
         --metadata pagetitle="$titulo" \
         --metadata lang="$idioma" \
-        --output "$TEMPORAL/manual-$idioma.html"
+        --output "$(nativo "$TEMPORAL/manual-$idioma.html")"
     # No header or footer: Chrome would print the local path of the HTML file in them.
     "$CHROME" --headless --disable-gpu --no-pdf-header-footer \
-        --print-to-pdf="$RAIZ/$salida" "file://$TEMPORAL/manual-$idioma.html" 2>/dev/null
+        --print-to-pdf="$(nativo "$RAIZ/$salida")" "$(url "$TEMPORAL/manual-$idioma.html")" 2>/dev/null
     echo "Manual: $salida"
 }
 
@@ -96,7 +108,7 @@ end
 LUA
 
 texto() {
-    pandoc "$1" --from gfm --to plain --columns 100 --lua-filter "$TEMPORAL/texto.lua" --output "$2"
+    "$PANDOC" "$1" --from gfm --to plain --columns 100 --lua-filter "$(nativo "$TEMPORAL/texto.lua")" --output "$2"
     echo "Text: $2"
 }
 

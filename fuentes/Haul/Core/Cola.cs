@@ -62,6 +62,8 @@ public sealed partial class Cola : Observable
         instrumentales = Ajustes.Datos.Instrumentales;
         listaEntera = Ajustes.Datos.ListaEntera;
         Loc.Cambio += () => { AvisarTodo(); foreach (var e in Elementos) e.AvisarTodo(); };
+        // Reordering, adding or removing rows is kept too.
+        Elementos.CollectionChanged += (_, _) => GuardarLuego();
     }
 
     public static string CarpetaDescargas()
@@ -216,6 +218,113 @@ public sealed partial class Cola : Observable
                                   nameof(TituloDelBoton), nameof(HayFallos), nameof(EnPausa), nameof(MostrarPausarTodo),
                                   nameof(MostrarSeguirTodo), nameof(MostrarCancelarTodo) })
             Avisar(p);
+        GuardarLuego();
+    }
+
+    // Whether something is running or waiting to start: an update waits for this to end if the user asks so.
+    public bool HayTrabajo => Ocupada || (!enPausa && Elementos.Any(e => e.Etapa == Etapa.EnCola && !e.EsLectura));
+
+    // ---- Kept between sessions (ColaGuardada) ----
+
+    private string? archivoGuardado;
+    private DispatcherTimer? demora;
+    private bool cerrada;
+
+    // The queue as it would be kept now.
+    public EstadoCola Estado()
+    {
+        var enlaces = new List<string>();
+        if (preguntaLista != null) enlaces.Add(preguntaLista);
+        enlaces.AddRange(pendientes);
+        return new EstadoCola
+        {
+            EnPausa = enPausa,
+            Filas = Elementos.Select(e => e.Guardar()).OfType<FilaGuardada>().ToList(),
+            Enlaces = enlaces,
+        };
+    }
+
+    // Puts back a kept queue after the rows already there. With "arrancar", playlists that were being read are
+    // read again, waiting links are added and the first queued download starts (unless the queue was paused).
+    public void Restaurar(EstadoCola estado, bool arrancar = true)
+    {
+        enPausa = estado.EnPausa;
+        var leer = new List<Elemento>();
+        foreach (var f in estado.Filas)
+        {
+            // Finished and cancelled rows are never kept; a file edited by hand may still have them.
+            if (f.Etapa is nameof(Etapa.Lista) or nameof(Etapa.Cancelada)) continue;
+            var e = Elemento.Restaurar(f);
+            Sumar(e);
+            if (e.EsLectura && e.Etapa == Etapa.EnCola) leer.Add(e);
+        }
+        foreach (var enlace in estado.Enlaces) pendientes.Enqueue(enlace);
+        Refrescar();
+        if (!arrancar) return;
+        foreach (var e in leer) Leer(e, yaEnLaCola: true);
+        ProcesarPendientes();
+    }
+
+    // Opens the queue kept in "archivo" and keeps every later change there. Returns false if the file was damaged
+    // (it is set aside as *.damaged.json and the queue starts empty).
+    public bool Abrir(string archivo, bool arrancar = true)
+    {
+        bool danado;
+        EstadoCola estado;
+        try { estado = ColaGuardada.Cargar(archivo, out danado); }
+        catch { estado = new EstadoCola(); danado = false; }   // unreadable for now (locked): nothing is lost
+        Restaurar(estado, arrancar);
+        archivoGuardado = archivo;
+        return !danado;
+    }
+
+    // Saves a second after the last change, so a burst of changes is written once.
+    private void GuardarLuego()
+    {
+        if (archivoGuardado == null || cerrada) return;
+        if (demora == null)
+        {
+            demora = new DispatcherTimer(DispatcherPriority.Background, ui) { Interval = TimeSpan.FromSeconds(1) };
+            demora.Tick += (_, _) => GuardarAhora();
+        }
+        demora.Stop();
+        demora.Start();
+    }
+
+    public void GuardarAhora()
+    {
+        if (archivoGuardado == null || cerrada) return;
+        demora?.Stop();
+        try { ColaGuardada.Guardar(Estado(), archivoGuardado); }
+        catch { /* the next change tries again */ }
+    }
+
+    // Haul is closing: the queue is saved as it is (the running download comes back queued, with its partial
+    // files) and then yt-dlp is stopped. Nothing changes the queue afterwards.
+    public void Cerrar()
+    {
+        if (cerrada) return;
+        GuardarAhora();
+        cerrada = true;
+        foreach (var t in esperas.Values) t.Stop();
+        esperas.Clear();
+        foreach (var p in lecturas.Values.ToList()) Matar(p);
+        if (proceso != null) Matar(proceso);
+    }
+
+    // Rows with example data for the pictures of the README (--captura); nothing runs.
+    public void Ejemplo()
+    {
+        var d = destino;
+        var a = new Elemento("https://www.example.com/watch/1", Formato.Video, d);
+        a.FijarInfo(tr("Un paseo por el puerto al atardecer", "A walk along the harbour at sunset"), tr("Canal de ejemplo", "Example channel"), "12:48", null);
+        a.Procesar("AVANCE\t42.0%\t3.10MiB/s\t00:25");
+        var b = new Elemento("https://www.example.com/watch/2", Formato.Audio, d);
+        b.FijarInfo(tr("Concierto de ejemplo, en vivo", "Example concert, live"), tr("Sello de ejemplo", "Example label"), "48:02", null);
+        var c = new Elemento("https://www.example.com/watch/3", Formato.Video, d);
+        c.FijarInfo(tr("Cómo plantar un limonero", "How to plant a lemon tree"), tr("Huerta de ejemplo", "Example garden"), "7:15", null);
+        c.Terminar();
+        foreach (var e in new[] { a, b, c }) Sumar(e);
     }
 
     // ---- Clipboard ----
@@ -546,6 +655,7 @@ public sealed partial class Cola : Observable
 
     private void Terminar(Elemento e, Process p)
     {
+        if (cerrada) { p.Dispose(); return; }
         // Exited can fire before the last output lines are delivered; waiting drains them.
         p.WaitForExit();
         int codigo = p.ExitCode;
@@ -623,6 +733,7 @@ public sealed partial class Cola : Observable
 
     private void Leida(Elemento fila, int codigo, string json, string error)
     {
+        if (cerrada) return;
         lecturas.Remove(fila);
         if (canceladas.Remove(fila)) { fila.Etapa = Etapa.Cancelada; Refrescar(); return; }
 

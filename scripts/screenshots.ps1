@@ -9,9 +9,9 @@
 # the GNU General Public License, version 2, as published by the Free Software Foundation.
 # It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 
-# Draws the main window, light and dark, and the appearance window, in English and Spanish, to docs\images\.
-# It uses the test option --captura of Haul: the settings are read but never written, nothing is downloaded,
-# and the program exits by itself. Requires the .NET 10 SDK.
+# Draws the main window, light and dark, the appearance window and the question about a new version, in English
+# and Spanish, to docs\images\. It uses the test option --captura of Haul: the default settings and an example
+# queue are used, the clipboard is not read, nothing is written or downloaded, and the program exits by itself. Requires the .NET 10 SDK.
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -32,4 +32,5 @@ foreach ($language in 'en', 'es') {
     Render (Join-Path $images "main-$language.png") @('--ventana', 'main', '--idioma', $language, '--tema', 'light', '--color', 'ember')
     Render (Join-Path $images "main-dark-$language.png") @('--ventana', 'main', '--idioma', $language, '--tema', 'dark', '--color', 'ember')
     Render (Join-Path $images "theme-$language.png") @('--ventana', 'tema', '--idioma', $language, '--tema', 'light', '--color', 'ember')
+    Render (Join-Path $images "update-$language.png") @('--ventana', 'aviso', '--idioma', $language, '--tema', 'light', '--color', 'ember')
 }

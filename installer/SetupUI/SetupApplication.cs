@@ -28,6 +28,8 @@ internal enum SetupState { Install, Upgrade, Maintenance, Uninstall, Newer }
 /// Bootstrapper application: talks to the WiX engine (detect, plan, apply) and drives the setup window.
 /// The engine calls back on its own thread; everything that touches the window goes through the dispatcher.
 /// Without a full user interface (/quiet, /passive, or an upgrade removing this version) it works on its own.
+/// Haul's own update runs it as "haul-setup.exe /quiet /norestart /HAULWAITPID=&lt;pid&gt; /HAULRELAUNCH=1": it waits
+/// for that Haul to close, installs keeping the language already chosen, and opens Haul again at the end.
 /// </summary>
 internal sealed class SetupApplication : BootstrapperApplication
 {
@@ -48,6 +50,10 @@ internal sealed class SetupApplication : BootstrapperApplication
     public string LastError { get; private set; }
     public bool Canceled { get; set; }
 
+    /// <summary>Haul's own update (see the class summary): the Haul to wait for, and whether to open Haul at the end.</summary>
+    private int waitPid;
+    private bool relaunch, relaunched;
+
     private Dispatcher dispatcher;
     private SetupWindow window;
     private IntPtr windowHandle;
@@ -64,6 +70,7 @@ internal sealed class SetupApplication : BootstrapperApplication
         dispatcher = Dispatcher.CurrentDispatcher;
         Version = engine.GetVariableVersion("WixBundleVersion");
         Loc.Current = InitialLanguage();
+        ReadUpdateSwitches();
 
         DetectRelatedBundle += OnDetectRelatedBundle;
         DetectPackageComplete += OnDetectPackageComplete;
@@ -102,6 +109,60 @@ internal sealed class SetupApplication : BootstrapperApplication
         }
         catch { }
         return System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es" ? UiLanguage.Es : UiLanguage.En;
+    }
+
+    /// <summary>
+    /// Reads /HAULWAITPID=&lt;pid&gt; and /HAULRELAUNCH=1, which the setup engine leaves for this program. They are
+    /// written by Haul itself (MainWindow.Actualizacion.cs) when it updates.
+    /// </summary>
+    private void ReadUpdateSwitches()
+    {
+        foreach (string raw in (Command.CommandLine ?? "").Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string arg = raw.Trim('"');
+            if (arg.Length < 2 || (arg[0] != '/' && arg[0] != '-')) continue;
+            string body = arg.Substring(1);
+            int eq = body.IndexOf('=');
+            string name = eq < 0 ? body : body.Substring(0, eq), value = eq < 0 ? "" : body.Substring(eq + 1);
+            if (name.Equals("HAULWAITPID", StringComparison.OrdinalIgnoreCase) && int.TryParse(value, out int pid) && pid > 0) waitPid = pid;
+            else if (name.Equals("HAULRELAUNCH", StringComparison.OrdinalIgnoreCase)) relaunch = value == "1";
+        }
+        if (waitPid > 0 || relaunch)
+            engine.Log(LogLevel.Standard, $"Haul setup: update from Haul (wait for process {waitPid}, open Haul at the end: {relaunch}).");
+    }
+
+    /// <summary>Waits up to a minute for the Haul that started this update to finish closing (it saves its queue first).</summary>
+    private void WaitForUpdatingHaul()
+    {
+        if (waitPid <= 0) return;
+        try
+        {
+            using (var p = Process.GetProcessById(waitPid))
+                engine.Log(LogLevel.Standard, p.WaitForExit(60000)
+                    ? "Haul setup: the updating Haul has closed."
+                    : "Haul setup: the updating Haul is still running after 60 s; it will be closed.");
+        }
+        catch (ArgumentException) { engine.Log(LogLevel.Standard, "Haul setup: the updating Haul had already closed."); }
+        catch (Exception ex) { engine.Log(LogLevel.Standard, "Haul setup: could not wait for Haul: " + ex.Message); }
+    }
+
+    /// <summary>
+    /// Opens Haul again after its own update, whether or not it worked (a failed update leaves the previous Haul in
+    /// place, which then says so). This program runs as the user who started the setup, never elevated, so Haul does too.
+    /// </summary>
+    private void RelaunchHaul()
+    {
+        if (!relaunch || relaunched || Planned == LaunchAction.Uninstall || Planned == LaunchAction.Layout) return;
+        relaunched = true;
+        try
+        {
+            string folder = InstallFolder;
+            string exe = Path.Combine(folder, "Haul.exe");
+            if (!File.Exists(exe)) { engine.Log(LogLevel.Standard, "Haul setup: Haul.exe not found; not opened."); return; }
+            Process.Start(new ProcessStartInfo(exe, "--actualizada") { UseShellExecute = false, WorkingDirectory = folder });
+            engine.Log(LogLevel.Standard, "Haul setup: opened Haul again.");
+        }
+        catch (Exception ex) { engine.Log(LogLevel.Standard, "Haul setup: could not open Haul again: " + ex.Message); }
     }
 
     // ---------------- Detect ----------------
@@ -146,8 +207,13 @@ internal sealed class SetupApplication : BootstrapperApplication
         // Closing Haul can take a few seconds: it is done off the window's thread.
         System.Threading.Tasks.Task.Run(() =>
         {
-            CloseRunningHaul(InstallFolder);
-            if (action != LaunchAction.Uninstall) RemoveScriptInstall();
+            // A layout only copies the setup's files to a folder: nothing installed is touched.
+            if (action != LaunchAction.Layout)
+            {
+                WaitForUpdatingHaul();
+                CloseRunningHaul(InstallFolder);
+                if (action != LaunchAction.Uninstall) RemoveScriptInstall();
+            }
             try { engine.Plan(action); }
             catch (Exception ex)
             {
@@ -230,7 +296,9 @@ internal sealed class SetupApplication : BootstrapperApplication
     private void OnApplyComplete(object sender, ApplyCompleteEventArgs e)
     {
         bool restart = e.Restart == ApplyRestart.RestartRequired;
-        if (e.Status < 0 || Canceled || Planned == LaunchAction.Uninstall)
+        // Haul's own update does not stop for FFmpeg and Deno: they were installed with Haul, and Haul says if one
+        // is missing. Running this setup by hand upgrades them.
+        if (e.Status < 0 || Canceled || Planned == LaunchAction.Uninstall || Planned == LaunchAction.Layout || relaunch)
         {
             Finish(e.Status, restart);
             return;
@@ -355,6 +423,7 @@ internal sealed class SetupApplication : BootstrapperApplication
     {
         exitCode = status;
         bool canceled = Canceled || status == UserCanceled;
+        RelaunchHaul();
         if (!Interactive)
         {
             dispatcher.BeginInvoke(new Action(() => dispatcher.InvokeShutdown()));

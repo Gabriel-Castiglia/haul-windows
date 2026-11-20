@@ -81,57 +81,66 @@ public sealed class AcercaDe : Window
         panel.Children.Add(mac);
         panel.Children.Add(Enlace(RepositorioMac));
 
-        panel.Children.Add(Titulo(tr("Versiones nuevas", "New versions")));
+        panel.Children.Add(Titulo(tr("Actualizaciones de Haul", "Haul updates")));
         var avisar = new CheckBox
         {
             Content = new TextBlock
             {
-                Text = tr("Avisar cuando haya una versión nueva (se consulta GitHub una vez al día)",
-                          "Tell me when there is a new version (GitHub is asked once a day)"),
+                Text = tr("Buscar una versión nueva una vez al día (se consulta GitHub) y ofrecer instalarla",
+                          "Look for a new version once a day (GitHub is asked) and offer to install it"),
                 TextWrapping = TextWrapping.Wrap,
             },
             IsChecked = Ajustes.Datos.BuscarVersiones,
         };
         avisar.Click += (_, _) => { Ajustes.Datos.BuscarVersiones = avisar.IsChecked == true; Ajustes.Guardar(); };
         panel.Children.Add(avisar);
-        var buscar = new Button { Content = tr("Buscar versión nueva", "Check for a new version"), Padding = new Thickness(12, 5, 12, 5) };
-        var estado = Secundario("");
-        estado.VerticalAlignment = VerticalAlignment.Center;
-        estado.Margin = new Thickness(0, 6, 0, 0);
-        buscar.Click += async (_, _) =>
+        var buscar = Boton(tr("Buscar actualizaciones", "Check for updates"));
+        // The check runs in the main window, which downloads, closes and reopens Haul if the answer is yes.
+        buscar.Click += (_, _) =>
         {
-            buscar.IsEnabled = false;
-            estado.Text = tr("Consultando GitHub…", "Asking GitHub…");
-            try
-            {
-                var ultima = await Versiones.UltimaAsync();
-                if (ultima != null && ultima > Versiones.Actual)
-                {
-                    estado.Text = tr($"Está la versión {ultima}.", $"Version {ultima} is out.");
-                    AvisarVersion(this, ultima);
-                }
-                else estado.Text = tr("Tenés la última versión.", "You have the latest version.");
-            }
-            catch
-            {
-                estado.Text = tr("No se pudo consultar GitHub.", "GitHub could not be reached.");
-            }
-            buscar.IsEnabled = true;
+            var principal = Owner as MainWindow;
+            Close();
+            if (principal != null) _ = principal.BuscarActualizacionAsync(interactiva: true);
         };
+        panel.Children.Add(buscar);
+
+        panel.Children.Add(Titulo(tr("Motor: yt-dlp", "Engine: yt-dlp")));
+        var motor = Secundario(TextoMotor());
+        panel.Children.Add(motor);
+        var solo = new CheckBox
+        {
+            Content = new TextBlock
+            {
+                Text = tr("Actualizar yt-dlp solo, una vez al día, con su versión oficial comprobada",
+                          "Update yt-dlp by itself, once a day, with its official release checked"),
+                TextWrapping = TextWrapping.Wrap,
+            },
+            IsChecked = Ajustes.Datos.ActualizarYtDlp,
+            Margin = new Thickness(0, 6, 0, 0),
+        };
+        solo.Click += (_, _) => { Ajustes.Datos.ActualizarYtDlp = solo.IsChecked == true; Ajustes.Guardar(); };
+        panel.Children.Add(solo);
+        var actualizar = Boton(tr("Actualizar yt-dlp", "Update yt-dlp"));
+        var estado = Secundario("");
+        estado.Margin = new Thickness(0, 6, 0, 0);
+        actualizar.Click += async (_, _) =>
+        {
+            if (Owner is not MainWindow principal) return;
+            actualizar.IsEnabled = false;
+            estado.Text = tr("Consultando GitHub…", "Asking GitHub…");
+            estado.Text = await principal.ActualizarYtDlpAsync(interactiva: true) ?? "";
+            motor.Text = TextoMotor();
+            actualizar.IsEnabled = true;
+        };
+        panel.Children.Add(actualizar);
         panel.Children.Add(estado);
 
-        // The check on request sits at the left of the bottom row, Close at the right.
-        var botones = new DockPanel { LastChildFill = false, Margin = new Thickness(0, 18, 0, 0) };
-        DockPanel.SetDock(buscar, Dock.Left);
-        botones.Children.Add(buscar);
         var cerrar = new Button { Content = tr("Cerrar", "Close"), Padding = new Thickness(14, 6, 14, 6),
-                                  IsDefault = true, IsCancel = true };
+                                  IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right,
+                                  Margin = new Thickness(0, 18, 0, 0) };
         if (Application.Current.TryFindResource("AccentButtonStyle") is Style s) cerrar.Style = s;
         cerrar.Click += (_, _) => Close();
-        DockPanel.SetDock(cerrar, Dock.Right);
-        botones.Children.Add(cerrar);
-        panel.Children.Add(botones);
-
+        panel.Children.Add(cerrar);
         Content = panel;
     }
 
@@ -160,48 +169,36 @@ public sealed class AcercaDe : Window
     // For the test screenshot.
     public static Window Crear() => new AcercaDe();
 
-    // Says that a newer version is out and offers its download page.
-    public static void AvisarVersion(Window duenio, Version nueva)
-    {
-        var w = Aviso(nueva);
-        w.Owner = duenio;
-        w.ShowDialog();
-    }
+    private static Button Boton(string texto) =>
+        new() { Content = texto, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 8, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
 
-    public static Window Aviso(Version nueva)
-    {
-        var w = new Window
-        {
-            Title = "Haul", Width = 440, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner, ShowInTaskbar = false,
-        };
-        w.SetResourceReference(IconProperty, "IconoVentana");
-        var panel = new StackPanel { Margin = new Thickness(24, 20, 24, 20) };
-        var cabecera = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
-        var icono = new Image { Width = 48, Height = 48, Margin = new Thickness(0, 0, 14, 0) };
-        icono.SetResourceReference(Image.SourceProperty, "IconoHaul");
-        RenderOptions.SetBitmapScalingMode(icono, BitmapScalingMode.HighQuality);
-        cabecera.Children.Add(icono);
-        cabecera.Children.Add(new TextBlock
-        {
-            Text = tr("Hay una versión nueva de Haul", "A new version of Haul is out"), FontSize = 17, FontWeight = FontWeights.SemiBold,
-            VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap,
-        });
-        panel.Children.Add(cabecera);
-        panel.Children.Add(Parrafo(tr($"Haul {nueva} está en GitHub; tenés la {Versiones.Actual}. La página de descarga tiene el instalador y lo que cambió.",
-                                      $"Haul {nueva} is on GitHub; you have {Versiones.Actual}. The download page has the setup and what changed.")));
-        var botones = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-                                       Margin = new Thickness(0, 18, 0, 0) };
-        var luego = new Button { Content = tr("Ahora no", "Not now"), Padding = new Thickness(14, 6, 14, 6), IsCancel = true,
-                                 Margin = new Thickness(0, 0, 8, 0) };
-        luego.Click += (_, _) => w.Close();
-        var ir = new Button { Content = tr("Ir a la descarga", "Go to the download"), Padding = new Thickness(14, 6, 14, 6), IsDefault = true };
-        if (Application.Current.TryFindResource("AccentButtonStyle") is Style s) ir.Style = s;
-        ir.Click += (_, _) => { Herramientas.Abrir(Versiones.Pagina); w.Close(); };
-        botones.Children.Add(luego);
-        botones.Children.Add(ir);
-        panel.Children.Add(botones);
-        w.Content = panel;
-        return w;
-    }
-}
+    private static string TextoMotor() => Herramientas.YtDlpActualizado
+        ? tr($"En uso: yt-dlp {Herramientas.VersionYtDlp}, descargado y comprobado por Haul (con Haul vino la {Herramientas.VersionYtDlpIncluido}).",
+             $"In use: yt-dlp {Herramientas.VersionYtDlp}, downloaded and checked by Haul ({Herramientas.VersionYtDlpIncluido} came with Haul).")
+        : tr($"En uso: yt-dlp {Herramientas.VersionYtDlp}, el que vino con Haul.",
+             $"In use: yt-dlp {Herramientas.VersionYtDlp}, the one that came with Haul.");
+
+    // The answers to the question about a new version, in the order of its buttons.
+    public const int Luego = 0, Novedades = 1, Ahora = 2;
+
+    // Says that a newer version is out. With its setup program in the release it offers to install it now; without
+    // it, only the page.
+    public static int PreguntarVersion(Window duenio, Version nueva, bool instalable) =>
+        Pregunta.Hacer(duenio, TituloVersion(), TextoVersion(nueva, instalable), BotonesVersion(instalable), instalable ? Ahora : Novedades);
+
+    // For the test screenshot.
+    public static Window Aviso(Version nueva) => Pregunta.Crear(TituloVersion(), TextoVersion(nueva, true), BotonesVersion(true), Ahora);
+
+    private static string TituloVersion() => tr("Hay una versión nueva de Haul", "A new version of Haul is out");
+
+    private static string TextoVersion(Version nueva, bool instalable) => instalable
+        ? tr($"Haul {nueva} está en GitHub; tenés la {Versiones.Actual}. «Actualizar ahora» lo descarga, comprueba que llegó intacto, "
+             + "cierra Haul, lo instala y vuelve a abrirlo con la cola como estaba. Windows pide permiso para instalar.",
+             $"Haul {nueva} is on GitHub; you have {Versiones.Actual}. \"Update now\" downloads it, checks that it arrived intact, "
+             + "closes Haul, installs it and opens it again with the queue as it was. Windows asks for permission to install.")
+        : tr($"Haul {nueva} está en GitHub; tenés la {Versiones.Actual}. La página de la versión tiene el instalador y lo que cambió.",
+             $"Haul {nueva} is on GitHub; you have {Versiones.Actual}. The release page has the setup and what changed.");
+
+    private static string[] BotonesVersion(bool instalable) => instalable
+        ? [tr("Más tarde", "Later"), tr("Ver novedades", "What's new"), tr("Actualizar ahora", "Update now")]
+        : [tr("Más tarde", "Later"), tr("Ver novedades", "What's new")];}

@@ -181,6 +181,59 @@ public sealed class Elemento : Observable
 
     public void Terminar() { Progreso = 1; Etapa = Etapa.Lista; }
 
+    // ---- Kept between sessions (ColaGuardada) ----
+
+    // The row as it is kept when Haul closes: a download that was running comes back queued, with its partial
+    // files, and a playlist being read is read again. Finished and cancelled rows are not kept (null).
+    public FilaGuardada? Guardar()
+    {
+        Etapa? queda = etapa switch
+        {
+            Etapa.EnCola or Etapa.Leyendo or Etapa.Preparando or Etapa.Bajando or Etapa.Procesando or Etapa.Esperando => Etapa.EnCola,
+            Etapa.Detenida or Etapa.Pausada or Etapa.Fallo => etapa,
+            _ => null,
+        };
+        if (queda is not { } e) return null;
+        return new FilaGuardada
+        {
+            Enlace = Enlace, Formato = Formatos.Clave(Formato), Destino = Destino,
+            Prefijo = Prefijo, NombreLista = NombreLista, Posicion = Posicion,
+            EsLectura = EsLectura, ListaEntera = ListaEntera,
+            Etapa = e.ToString(), Fallo = e == Etapa.Fallo ? Fallo : null,
+            Titulo = titulo, Autor = autor, Duracion = duracion, Miniatura = miniatura,
+            Instrumental = Instrumental, Forzar = Forzar,
+            Progreso = e == Etapa.Detenida ? Progreso : 0,
+            BaseArchivo = baseArchivo, Previos = baseArchivo != null ? previos.ToList() : null,
+        };
+    }
+
+    // A row kept by Guardar. The thumbnail is fetched again.
+    public static Elemento Restaurar(FilaGuardada f)
+    {
+        var e = new Elemento(f.Enlace, Formatos.Desde(f.Formato), string.IsNullOrWhiteSpace(f.Destino) ? Cola.CarpetaDescargas() : f.Destino)
+        {
+            Prefijo = f.Prefijo, NombreLista = f.NombreLista, Posicion = f.Posicion,
+            EsLectura = f.EsLectura, ListaEntera = f.ListaEntera,
+        };
+        e.etapa = Enum.TryParse<Etapa>(f.Etapa, out var etapa) && etapa is Etapa.Detenida or Etapa.Pausada or Etapa.Fallo
+            ? etapa : Etapa.EnCola;
+        if (e.etapa == Etapa.Fallo) e.Fallo = f.Fallo ?? "";
+        e.Instrumental = f.Instrumental;
+        e.Forzar = f.Forzar;
+        e.Progreso = e.etapa == Etapa.Detenida ? Math.Clamp(f.Progreso, 0, 1) : 0;
+        e.baseArchivo = string.IsNullOrWhiteSpace(f.BaseArchivo) ? null : f.BaseArchivo;
+        e.previos = new HashSet<string>(f.Previos ?? [], StringComparer.OrdinalIgnoreCase);
+        e.titulo = string.IsNullOrWhiteSpace(f.Titulo) ? null : f.Titulo;
+        e.autor = f.Autor;
+        e.duracion = f.Duracion;
+        if (!string.IsNullOrWhiteSpace(f.Miniatura))
+        {
+            e.miniatura = f.Miniatura;
+            e.imagen = e.Cargar(f.Miniatura);
+        }
+        return e;
+    }
+
     private void Anotar(string nombre)
     {
         var p = System.IO.Path.IsPathRooted(nombre) ? nombre : System.IO.Path.Combine(Destino, nombre);
