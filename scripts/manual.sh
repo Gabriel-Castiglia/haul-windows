@@ -36,7 +36,7 @@ command -v "$PANDOC" >/dev/null || { echo "pandoc is missing: brew install pando
 
 # On Windows the programs get Windows paths (C:/...); on macOS paths stay as they are.
 nativo() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
-url() { local p; p="$(nativo "$1")"; [[ "$p" == /* ]] && printf 'file://%s' "$p" || printf 'file:///%s' "$p"; }
+url() { local p; p="$(nativo "$1")"; [[ "$p" == /* ]] || p="/$p"; printf 'file://%s' "$p"; }
 
 TEMPORAL="$(mktemp -d)"
 trap 'rm -rf "$TEMPORAL"' EXIT
