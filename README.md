@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-en.png" width="420" alt="The Haul window, dark"></p>
 
-Gabriel Castiglia · November 25, 2026 · version 1.7.2 · GPL-2.0-only · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · November 26, 2026 · version 1.7.3 · GPL-2.0-only · built and tested with yt-dlp 2026.11.23
 
 English · [Español](README.es.md)
 
@@ -171,7 +171,7 @@ H.264 is preferred because every Windows player handles it. Files are named afte
 | `scripts/extraer_licencias.py` | Reads the third-party licenses stored inside `yt-dlp.exe` |
 | `scripts/manual.sh` | Builds the PDF manuals and `README.txt`, `README.es.txt` from the READMEs (on macOS, with pandoc and Google Chrome) |
 | `plugins/haul/` | Haul's own yt-dlp extractor plugin, for links the bundled version does not handle |
-| `vendor/yt-dlp/` | Bundled copy of yt-dlp 2026.08.19, with sources, checksums, signature and licenses |
+| `vendor/yt-dlp/` | Bundled copy of yt-dlp 2026.11.23, with sources, checksums, signature and licenses |
 | `docs/Haul-manual-en.pdf`, `docs/Haul-manual-es.pdf` | PDF manuals, in English and Spanish |
 | `docs/manual.css` | Stylesheet for the manuals |
 | `README.md`, `README.es.md` | This documentation, in English and Spanish |
@@ -247,7 +247,7 @@ next ones use the new copy. The copy installed with Haul is never changed and is
 newer checked copy exists; older downloaded copies are removed when Haul starts.
 ## Maintenance
 
-Haul is built and tested with yt-dlp 2026.08.19, and that exact copy ships with the app. A pinned
+Haul is built and tested with yt-dlp 2026.11.23, and that exact copy ships with the app. A pinned
 version keeps the behavior stable and does not depend on the yt-dlp repository staying online. The
 trade-off is that sites change often, and sooner or later a fixed version stops working with them.
 When that happens, a new release of Haul moves to a newer yt-dlp:

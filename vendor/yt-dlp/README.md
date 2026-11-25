@@ -1,9 +1,9 @@
-# yt-dlp 2026.08.19, bundled copy
+# yt-dlp 2026.11.23, bundled copy
 
 English · [Español](README.es.md)
 
 This folder holds an unmodified copy of [yt-dlp](https://github.com/yt-dlp/yt-dlp) version
-2026.08.19. Haul for Windows is built and tested with this exact version and installs it next to the
+2026.11.23. Haul for Windows is built and tested with this exact version and installs it next to the
 app, so its behavior does not change when yt-dlp publishes a new release, and the project keeps
 working even if the upstream repository becomes unavailable.
 
@@ -18,8 +18,8 @@ working even if the upstream repository becomes unavailable.
 
 ## Provenance
 
-The files were downloaded on October 20, 2026 from the
-[2026.08.19 release](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.08.19). The SHA-256 hashes
+The files were downloaded on November 26, 2026 from the
+[2026.11.23 release](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.11.23). The SHA-256 hashes
 of `yt-dlp.exe` and `yt-dlp.tar.gz` match `SHA2-256SUMS`, and the signature on that file was verified
 with the yt-dlp signing key `AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581` (Simon Sawicki).
 `scripts/compilar.ps1` checks the hash of `yt-dlp.exe` again on every build. `SHA2-256SUMS` is

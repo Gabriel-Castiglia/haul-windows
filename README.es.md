@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-es.png" width="420" alt="La ventana de Haul, oscura"></p>
 
-Gabriel Castiglia · 25 de noviembre de 2026 · versión 1.7.2 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 26 de noviembre de 2026 · versión 1.7.3 · GPL-2.0-only · hecho y probado con yt-dlp 2026.11.23
 
 [English](README.md) · Español
 
@@ -179,7 +179,7 @@ Se prefiere H.264 porque cualquier reproductor de Windows lo abre. Los archivos 
 | `scripts/extraer_licencias.py` | Lee las licencias de terceros guardadas dentro de `yt-dlp.exe` |
 | `scripts/manual.sh` | Arma los manuales en PDF y `README.txt`, `README.es.txt` a partir de los README (en macOS, con pandoc y Google Chrome) |
 | `plugins/haul/` | Complemento de extractores propio de Haul para yt-dlp, para enlaces que la versión incluida no maneja |
-| `vendor/yt-dlp/` | Copia incluida de yt-dlp 2026.08.19, con fuentes, sumas, firma y licencias |
+| `vendor/yt-dlp/` | Copia incluida de yt-dlp 2026.11.23, con fuentes, sumas, firma y licencias |
 | `docs/Haul-manual-en.pdf`, `docs/Haul-manual-es.pdf` | Manuales en PDF, en inglés y en castellano |
 | `docs/manual.css` | Hoja de estilo de los manuales |
 | `README.md`, `README.es.md` | Esta documentación, en inglés y en castellano |
@@ -258,7 +258,7 @@ nueva. La copia que vino con Haul no se cambia nunca y se vuelve a usar si no ha
 más nueva; las copias descargadas más viejas se borran al abrir Haul.
 ## Mantenimiento
 
-Haul está hecho y probado con yt-dlp 2026.08.19, y esa copia exacta viene con la aplicación. Una
+Haul está hecho y probado con yt-dlp 2026.11.23, y esa copia exacta viene con la aplicación. Una
 versión fija mantiene el comportamiento estable y no depende de que el repositorio de yt-dlp siga en
 línea. La contracara es que los sitios cambian seguido, y tarde o temprano una versión fija deja de funcionar con ellos. Cuando eso pase, una versión nueva de Haul pasa a un yt-dlp más nuevo:
 

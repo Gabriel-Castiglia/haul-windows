@@ -2,6 +2,15 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.7.3 - 2026-11-26
+
+### Changed
+
+- Bundles **yt-dlp 2026.11.23** (it was 2026.08.19), unmodified, with its signature and checksums verified against
+  the key of yt-dlp's releases (`AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581`). The 2026.08.19 copy no longer
+  downloaded from YouTube on Windows ("Requested format is not available"); checked with a real download.
+- Building the manuals also stops when the yt-dlp version written under the title of a README is not the bundled one.
+
 ## 1.7.2 - 2026-11-25
 
 ### Changed
