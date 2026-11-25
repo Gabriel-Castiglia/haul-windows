@@ -2,6 +2,17 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.7.2 - 2026-11-25
+
+### Changed
+
+- **Updates signed by the author**: the `SHA256SUMS.txt` of a release must now carry the author's signature
+  (`release.sig`, ECDSA P-256, checked against two keys built into Haul) before the setup is downloaded. Before,
+  the setup was checked only against hashes that came from the same page, so a release put there by someone else
+  would have installed itself. A release without a valid signature is offered as a page, to download by hand.
+  Anyone can still download, install and share Haul as before; Haul 1.7.1 and older install this one as usual.
+  The updates of yt-dlp are checked as before, against yt-dlp's own `SHA2-256SUMS`.
+
 ## 1.7.1 - 2026-11-20
 
 ### Fixed

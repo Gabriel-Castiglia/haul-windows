@@ -38,6 +38,13 @@ command -v "$PANDOC" >/dev/null || { echo "pandoc is missing: brew install pando
 nativo() { if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
 url() { local p; p="$(nativo "$1")"; [[ "$p" == /* ]] || p="/$p"; printf 'file://%s' "$p"; }
 
+# The line under the title of each README names the version (Muelle's went out three versions behind): it must be
+# the program's, from fuentes/Haul/Haul.csproj.
+VERSION=$(sed -n 's|.*<Version>\(.*\)</Version>.*|\1|p' fuentes/Haul/Haul.csproj | head -1)
+for f in README.md:version README.es.md:versión; do
+    grep -q "· ${f#*:} $VERSION ·" "${f%%:*}" || { echo "${f%%:*} does not say \"${f#*:} $VERSION\" under its title" >&2; exit 1; }
+done
+
 TEMPORAL="$(mktemp -d)"
 trap 'rm -rf "$TEMPORAL"' EXIT
 

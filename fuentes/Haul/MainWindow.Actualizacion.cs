@@ -22,8 +22,9 @@ namespace Haul;
 // Updates that install themselves, for Haul and for yt-dlp.
 //
 // Haul: "Check for updates" in the ⓘ window, and once a day by itself. When GitHub has a newer release, one
-// question (Update now / What's new / Later), and then everything happens alone: haul-setup.exe is downloaded and
-// checked against the release's SHA256SUMS.txt (a file that does not match is deleted, never run); if a download
+// question (Update now / What's new / Later), and then everything happens alone: the release's SHA256SUMS.txt must
+// carry the author's signature (release.sig, ReleaseSignature.cs; without a valid one nothing is downloaded),
+// haul-setup.exe is downloaded and checked against that list (a file that does not match is deleted, never run); if a download
 // is running, Haul asks whether to stop it now (it comes back from its partial files) or to wait for the queue to
 // end; the queue is saved, the setup program runs in silence (/quiet) keeping the installed options, waits for this
 // Haul to be gone (/HAULWAITPID) and opens Haul again (/HAULRELAUNCH), which brings the queue back. Windows asks
@@ -95,10 +96,10 @@ public partial class MainWindow
         var archivos = Versiones.Archivos(l);
         int r = AcercaDe.PreguntarVersion(this, nueva, archivos != null);
         if (r == AcercaDe.Novedades) Herramientas.Abrir(l.Pagina ?? Versiones.Pagina);
-        else if (r == AcercaDe.Ahora && archivos is { } a) await InstalarAsync(nueva, a.instalador, a.sumas);
+        else if (r == AcercaDe.Ahora && archivos is { } a) await InstalarAsync(nueva, a.instalador, a.sumas, a.firma);
     }
 
-    private async Task InstalarAsync(Version nueva, string urlInstalador, string urlSumas)
+    private async Task InstalarAsync(Version nueva, string urlInstalador, string urlSumas, string urlFirma)
     {
         actualizando = true;
         var instalador = Path.Combine(Versiones.CarpetaDescarga, Versiones.Instalador);
@@ -107,7 +108,7 @@ public partial class MainWindow
             var progreso = new Progress<int>(p => MostrarEstado(p >= 0
                 ? tr($"Descargando Haul {nueva}… {p} %", $"Downloading Haul {nueva}… {p} %")
                 : tr($"Descargando Haul {nueva}…", $"Downloading Haul {nueva}…")));
-            var hash = await Actualizacion.DescargarVerificadoAsync(urlInstalador, urlSumas, Versiones.Instalador, instalador, progreso);
+            var hash = await Actualizacion.DescargarVerificadoAsync(urlInstalador, urlSumas, Versiones.Instalador, instalador, progreso, urlFirma);
 
             if (cola.HayTrabajo)
             {

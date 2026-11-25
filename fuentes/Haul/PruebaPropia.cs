@@ -108,15 +108,28 @@ public static class PruebaPropia
              "assets":[{"name":"haul-setup.exe","browser_download_url":"https://example.invalid/haul-setup.exe"},
                        {"name":"haul.msi","browser_download_url":"https://example.invalid/haul.msi"},
                        {"name":"SHA256SUMS.txt","browser_download_url":"https://example.invalid/SHA256SUMS.txt"},
+                       {"name":"release.sig","browser_download_url":"https://example.invalid/release.sig"},
                        {"name":"Haul-manual-en.pdf","browser_download_url":"https://example.invalid/m.pdf"}]}
             """;
         var l = Actualizacion.Leer(json);
         Comprobar("tag read", l.Etiqueta == "v9.8.0");
         Comprobar("page read", l.Pagina?.EndsWith("/v9.8.0") == true);
-        Comprobar("4 files read", l.Archivos.Count == 4);
+        Comprobar("5 files read", l.Archivos.Count == 5);
         Comprobar("newer than the running Haul", Versiones.EsNueva(l));
         var a = Versiones.Archivos(l);
-        Comprobar("setup and checksums chosen", a is { } x && x.instalador.EndsWith("/haul-setup.exe") && x.sumas.EndsWith("/SHA256SUMS.txt"));
+        Comprobar("setup, checksums and signature chosen", a is { } x && x.instalador.EndsWith("/haul-setup.exe") && x.sumas.EndsWith("/SHA256SUMS.txt")
+                  && x.firma.EndsWith("/release.sig"));
+        var sinFirma = Actualizacion.Leer(json.Replace("release.sig", "release.txt"));
+        Comprobar("without the author's signature nothing is installable", Versiones.Archivos(sinFirma) == null);
+        // release.sig: real signatures by the author's two keys (the PC's, the Mac's) of the same bytes; any change is refused
+        var firmado = System.Text.Encoding.UTF8.GetBytes("0123456789abcdef0123456789abcdef0123456789abcdef0123456789ABCDEF  Vigia-Setup-9.9.9.exe\n"
+                                                         + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff *Vigia_Manual_EN.pdf\n");
+        const string firmaPc = "rEEKYRSXLO7VKbID/El7ZkFBh1uKIPNS38KopNSZ6DEm7knfIUjxch9kmv8xfREc6bLKka+bePFZ1BKzO+15ww==";
+        const string firmaMac = "K8+3h6FgPjn2ZyH3HsLWof4obfKfyW00p3YKE9WQFoEF+umfN6/OMxMQNrQbc3XqkKrZSz3QexCBIZEMrdrvKg==";
+        var cambiado = (byte[])firmado.Clone(); cambiado[0] ^= 1;
+        Comprobar("release signature: either key, exactly those bytes", ReleaseSignature.Valid(firmado, firmaPc + "\n") && ReleaseSignature.Valid(firmado, firmaMac)
+                  && !ReleaseSignature.Valid(cambiado, firmaPc) && !ReleaseSignature.Valid(cambiado, firmaMac)
+                  && !ReleaseSignature.Valid(firmado, "") && !ReleaseSignature.Valid(firmado, null) && !ReleaseSignature.Valid(firmado, "not base64!"));
         var sinSumas = Actualizacion.Leer("""{"tag_name":"v9.8.0","assets":[{"name":"haul-setup.exe","browser_download_url":"https://example.invalid/s.exe"}]}""");
         Comprobar("without SHA256SUMS.txt nothing is installable", Versiones.Archivos(sinSumas) == null && sinSumas.Pagina == null);
         var vieja = Actualizacion.Leer("""{"tag_name":"v1.0.0","assets":[]}""");
@@ -288,12 +301,15 @@ public static class PruebaPropia
     private static void Red(string carpeta)
     {
         var haul = Task.Run(Versiones.UltimoAsync).GetAwaiter().GetResult();
-        Comprobar($"latest Haul release ({haul.Etiqueta}) has its setup and checksums", Versiones.Archivos(haul) != null);
+        Comprobar($"latest Haul release ({haul.Etiqueta}) has its setup, checksums and signature", Versiones.Archivos(haul) != null);
         if (Versiones.Archivos(haul) is { } a)
         {
             using var http = Actualizacion.Cliente(TimeSpan.FromSeconds(30));
-            var sumas = Task.Run(() => http.GetStringAsync(a.sumas)).GetAwaiter().GetResult();
+            var bytes = Task.Run(() => http.GetByteArrayAsync(a.sumas)).GetAwaiter().GetResult();
+            var sumas = System.Text.Encoding.UTF8.GetString(bytes);
             Comprobar("its SHA256SUMS.txt names haul-setup.exe", Actualizacion.HashDe(sumas, Versiones.Instalador) != null);
+            Comprobar("its SHA256SUMS.txt carries a valid signature of the author",
+                      ReleaseSignature.Valid(bytes, Task.Run(() => http.GetStringAsync(a.firma)).GetAwaiter().GetResult()));
         }
         var yt = Task.Run(() => Actualizacion.UltimoAsync(MotorYtDlp.Repositorio)).GetAwaiter().GetResult();
         Comprobar($"latest yt-dlp release ({yt.Etiqueta}) has yt-dlp.exe and SHA2-256SUMS and a valid tag",

@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-es.png" width="420" alt="La ventana de Haul, oscura"></p>
 
-Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.1 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
+Gabriel Castiglia · 25 de noviembre de 2026 · versión 1.7.2 · GPL-2.0-only · hecho y probado con yt-dlp 2026.08.19
 
 [English](README.md) · Español
 
@@ -231,8 +231,10 @@ pregunta a GitHub por su última versión. Si es más nueva, una ventana chica p
 
 ![La pregunta por una versión nueva](docs/images/update-es.png)
 
-Con «Actualizar ahora» todo pasa solo: Haul descarga `haul-setup.exe` de la versión y lo compara con
-el `SHA256SUMS.txt` de la versión; un archivo que no coincide se borra y no se ejecuta nunca. Si hay
+Con «Actualizar ahora» todo pasa solo: Haul comprueba primero que el `SHA256SUMS.txt` de la versión
+lleve la firma del autor (`release.sig`, que se comprueba con dos claves que trae Haul; una versión sin firma
+válida se rechaza y solo se puede bajar a mano desde su página), después descarga `haul-setup.exe` y lo
+compara con ese `SHA256SUMS.txt`; un archivo que no coincide se borra y no se ejecuta nunca. Si hay
 una descarga en curso, Haul pregunta antes si actualizar ahora (la descarga se detiene y sigue desde
 sus archivos a medias cuando Haul vuelve) o cuando termine la cola. Después guarda la cola, se cierra
 y ejecuta el programa de instalación en silencio, conservando el idioma elegido al instalar; Windows

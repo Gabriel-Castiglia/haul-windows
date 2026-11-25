@@ -16,8 +16,9 @@ using System.IO;
 namespace Haul.Core;
 
 // The releases of Haul for Windows on GitHub. Nothing is sent but the request itself (with "Haul/<version>" as the
-// program name). Each release carries haul-setup.exe and SHA256SUMS.txt; the update installs that setup program
-// only after checking it against that list (MainWindow.Actualizacion.cs).
+// program name). Each release carries haul-setup.exe, SHA256SUMS.txt and release.sig, the author's signature of that
+// list (ReleaseSignature.cs); the update installs that setup program only after checking the signature and then the
+// setup against the list (MainWindow.Actualizacion.cs). A release without them is only offered as a page.
 public static class Versiones
 {
     public const string Repositorio = "Gabriel-Castiglia/haul-windows";
@@ -39,9 +40,9 @@ public static class Versiones
     // Whether a release is newer than the running Haul.
     public static bool EsNueva(Actualizacion.Lanzamiento l) => Actualizacion.EsMasNueva(l.Etiqueta, Actual.ToString());
 
-    // The addresses of the setup program and of the checksum list, when the release has both.
-    public static (string instalador, string sumas)? Archivos(Actualizacion.Lanzamiento l) =>
-        l.Archivo(Instalador) is { } i && l.Archivo(Sumas) is { } s ? (i, s) : null;
+    // The addresses of the setup program, of the checksum list and of its signature, when the release has all three.
+    public static (string instalador, string sumas, string firma)? Archivos(Actualizacion.Lanzamiento l) =>
+        l.Archivo(Instalador) is { } i && l.Archivo(Sumas) is { } s && l.Archivo(ReleaseSignature.AssetName) is { } f ? (i, s, f) : null;
 
     // Where the setup program is downloaded before running it.
     public static string CarpetaDescarga => Path.Combine(Path.GetTempPath(), "HaulUpdate");

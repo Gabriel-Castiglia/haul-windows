@@ -1,7 +1,7 @@
 Haul para Windows
 =================
 
-Gabriel Castiglia · 20 de noviembre de 2026 · versión 1.7.1 · GPL-2.0-only · hecho y probado con
+Gabriel Castiglia · 25 de noviembre de 2026 · versión 1.7.2 · GPL-2.0-only · hecho y probado con
 yt-dlp 2026.08.19
 
 English (README.txt) · Español
@@ -229,15 +229,18 @@ Haul. Una vez por día (y cada vez que se aprieta «Buscar actualizaciones» en 
 pregunta a GitHub por su última versión. Si es más nueva, una ventana chica pregunta una sola vez:
 «Actualizar ahora», «Ver novedades» (abre la página de la versión) o «Más tarde».
 
-Con «Actualizar ahora» todo pasa solo: Haul descarga haul-setup.exe de la versión y lo compara con
-el SHA256SUMS.txt de la versión; un archivo que no coincide se borra y no se ejecuta nunca. Si hay
-una descarga en curso, Haul pregunta antes si actualizar ahora (la descarga se detiene y sigue desde
-sus archivos a medias cuando Haul vuelve) o cuando termine la cola. Después guarda la cola, se
-cierra y ejecuta el programa de instalación en silencio, conservando el idioma elegido al instalar;
-Windows pide permiso, porque Haul se instala para todos los usuarios. El programa de instalación
-espera a que Haul se cierre, instala y vuelve a abrir Haul con su cola. Si la instalación no se hizo
-(por ejemplo, porque se negó el permiso), el Haul que se abre lo dice. La consulta a GitHub no lleva
-más que el nombre del programa y su versión. La ventana ⓘ apaga la búsqueda diaria.
+Con «Actualizar ahora» todo pasa solo: Haul comprueba primero que el SHA256SUMS.txt de la versión
+lleve la firma del autor (release.sig, que se comprueba con dos claves que trae Haul; una versión
+sin firma válida se rechaza y solo se puede bajar a mano desde su página), después descarga
+haul-setup.exe y lo compara con ese SHA256SUMS.txt; un archivo que no coincide se borra y no se
+ejecuta nunca. Si hay una descarga en curso, Haul pregunta antes si actualizar ahora (la descarga se
+detiene y sigue desde sus archivos a medias cuando Haul vuelve) o cuando termine la cola. Después
+guarda la cola, se cierra y ejecuta el programa de instalación en silencio, conservando el idioma
+elegido al instalar; Windows pide permiso, porque Haul se instala para todos los usuarios. El
+programa de instalación espera a que Haul se cierre, instala y vuelve a abrir Haul con su cola. Si
+la instalación no se hizo (por ejemplo, porque se negó el permiso), el Haul que se abre lo dice. La
+consulta a GitHub no lleva más que el nombre del programa y su versión. La ventana ⓘ apaga la
+búsqueda diaria.
 
 La actualización silenciosa es del propio programa de instalación:
 haul-setup.exe /quiet /norestart /HAULWAITPID=<pid> /HAULRELAUNCH=1 espera a que termine ese proceso

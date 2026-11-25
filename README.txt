@@ -1,7 +1,7 @@
 Haul for Windows
 ================
 
-Gabriel Castiglia · November 20, 2026 · version 1.7.1 · GPL-2.0-only · built and tested with yt-dlp
+Gabriel Castiglia · November 25, 2026 · version 1.7.2 · GPL-2.0-only · built and tested with yt-dlp
 2026.08.19
 
 English · Español (README.es.txt)
@@ -218,15 +218,17 @@ Haul. Once a day (and whenever "Check for updates" is pressed in the ⓘ window)
 its latest release. If it is newer, a small window asks once: "Update now", "What's new" (opens the
 release page) or "Later".
 
-With "Update now" everything happens by itself: Haul downloads haul-setup.exe from the release and
-checks it against the release's SHA256SUMS.txt; a file that does not match is deleted and never run.
-If a download is running, Haul asks first whether to update now (the download stops and carries on
-from its partial files when Haul comes back) or when the queue ends. Then it saves the queue,
-closes, and runs the setup program in silence, keeping the language chosen at installation; Windows
-asks for permission, because Haul is installed for all users. The setup program waits for Haul to be
-gone, installs, and opens Haul again with its queue. If the installation did not happen (for
-example, because the permission was refused), the Haul that opens says so. The request to GitHub
-carries nothing but the program name and its version. The ⓘ window turns the daily check off.
+With "Update now" everything happens by itself: Haul first checks that the release's SHA256SUMS.txt
+carries the author's signature (release.sig, checked against two keys built into Haul; a release
+without a valid one is refused, and can only be downloaded by hand from its page), then downloads
+haul-setup.exe and checks it against that SHA256SUMS.txt; a file that does not match is deleted and
+never run. If a download is running, Haul asks first whether to update now (the download stops and
+carries on from its partial files when Haul comes back) or when the queue ends. Then it saves the
+queue, closes, and runs the setup program in silence, keeping the language chosen at installation;
+Windows asks for permission, because Haul is installed for all users. The setup program waits for
+Haul to be gone, installs, and opens Haul again with its queue. If the installation did not happen
+(for example, because the permission was refused), the Haul that opens says so. The request to
+GitHub carries nothing but the program name and its version. The ⓘ window turns the daily check off.
 
 The silent update is the setup program's own:
 haul-setup.exe /quiet /norestart /HAULWAITPID=<pid> /HAULRELAUNCH=1 waits for that process to end

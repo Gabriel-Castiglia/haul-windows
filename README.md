@@ -5,7 +5,7 @@
 
 <p align="center"><img src="docs/images/main-dark-en.png" width="420" alt="The Haul window, dark"></p>
 
-Gabriel Castiglia · November 20, 2026 · version 1.7.1 · GPL-2.0-only · built and tested with yt-dlp 2026.08.19
+Gabriel Castiglia · November 25, 2026 · version 1.7.2 · GPL-2.0-only · built and tested with yt-dlp 2026.08.19
 
 English · [Español](README.es.md)
 
@@ -221,8 +221,10 @@ the release page) or "Later".
 
 ![The question about a new version](docs/images/update-en.png)
 
-With "Update now" everything happens by itself: Haul downloads `haul-setup.exe` from the release and
-checks it against the release's `SHA256SUMS.txt`; a file that does not match is deleted and never run.
+With "Update now" everything happens by itself: Haul first checks that the release's `SHA256SUMS.txt`
+carries the author's signature (`release.sig`, checked against two keys built into Haul; a release without a
+valid one is refused, and can only be downloaded by hand from its page), then downloads `haul-setup.exe` and
+checks it against that `SHA256SUMS.txt`; a file that does not match is deleted and never run.
 If a download is running, Haul asks first whether to update now (the download stops and carries on
 from its partial files when Haul comes back) or when the queue ends. Then it saves the queue, closes,
 and runs the setup program in silence, keeping the language chosen at installation; Windows asks for
