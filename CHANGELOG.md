@@ -2,6 +2,14 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+## 1.7.4 - 2026-11-27
+
+### Changed
+
+- **A new icon**: a download arrow going into a tray, drawn as a flat picture, cream with a black outline on the
+  chosen colour, with the play sign of a video. It replaces the engraving of an eagle carrying a hare, and still
+  follows the colour chosen in the settings, in all twelve colours. The drawing is in `assets/icon.svg`.
+
 ## 1.7.3 - 2026-11-26
 
 ### Changed

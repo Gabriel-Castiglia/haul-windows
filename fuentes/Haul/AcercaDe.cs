@@ -59,10 +59,8 @@ public sealed class AcercaDe : Window
             + "what the app does: with yt-dlp as its engine, it brings the load home.")));
 
         panel.Children.Add(Secundario(tr(
-            "Ícono: el águila que trae una liebre del grabado «Águila que le trae una liebre a una joven», del Monogramista B "
-            + "(Italia, siglo XVII), Rijksmuseum, dominio público.",
-            "Icon: the eagle carrying a hare from the engraving \"Eagle bringing a young woman a hare\" by the Monogrammist B "
-            + "(Italy, 17th century), Rijksmuseum, public domain.")));
+            "Ícono: una flecha de descarga que entra en una bandeja, dibujada para Haul (2026), bajo la GPL-2.0 como el resto.",
+            "Icon: a download arrow going into a tray, drawn for Haul (2026), under the GPL-2.0 like the rest.")));
 
         panel.Children.Add(Titulo(tr("Autor", "Author")));
         panel.Children.Add(Parrafo("Gabriel Castiglia · © 2026"));

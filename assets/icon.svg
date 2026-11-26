@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+      <rect x="100" y="100" width="824" height="824" rx="185" fill="#D9652F"/>
+      <g stroke="#111" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+        <!-- tray -->
+        <path d="M232 560 H 380 Q 392 620 452 620 H 572 Q 632 620 644 560 H 792 V 760 Q 792 790 762 790 H 262 Q 232 790 232 760 Z" fill="#EEE8DA"/>
+        <!-- arrow -->
+        <path d="M470 196 H 554 V 420 H 640 L 512 560 L 384 420 H 470 Z" fill="#EEE8DA"/>
+      </g>
+      <path d="M484 664 L 556 704 L 484 744 Z" fill="#D9652F" stroke="#111" stroke-width="16" stroke-linejoin="round"/>
+    </svg>

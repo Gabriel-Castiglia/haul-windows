@@ -1,7 +1,7 @@
 Haul for Windows
 ================
 
-Gabriel Castiglia · November 26, 2026 · version 1.7.3 · GPL-2.0-only · built and tested with yt-dlp
+Gabriel Castiglia · November 27, 2026 · version 1.7.4 · GPL-2.0-only · built and tested with yt-dlp
 2026.11.23
 
 English · Español (README.es.txt)
@@ -157,11 +157,10 @@ Repository layout
 -----------------
 
   Path                                                                        Contents
-  --------------------------------------------------------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------- -----------------------------------------------------------------------------------------------------------------
   fuentes/Haul/                                                               App source code (C#, WPF on .NET 10)
   fuentes/Haul/Core/                                                          Queue and its saved copy, playlists, links, settings, updates and the yt-dlp process
-  assets/                                                                     The engraving the icon comes from
-  scripts/make_icon.py                                                        Draws the icon in its twelve colours (Python 3 with numpy, opencv-python, scipy and Pillow); the same script makes the icon of the macOS version
+  assets/icon.svg                                                             The drawing of the icon (made in its twelve colours by the author's icon tool, the same for the macOS version)
   icono/Haul.ico, icono/icono-256.png, icono/icono-1024.png, icono/accents/   The icon, on its default orange and on each colour
   scripts/screenshots.ps1                                                     Draws the pictures of the window in docs/images, with example data
   installer/Msi/                                                              The MSI package (WiX)
@@ -336,5 +335,5 @@ Haul includes an unmodified copy of yt-dlp in vendor/yt-dlp, which keeps its own
 (Unlicense, plus the licenses of the components inside yt-dlp.exe) and is not covered by the GPL.
 Haul runs yt-dlp and ffmpeg as separate programs and does not link to them; ffmpeg is not bundled.
 
-The icon is the eagle carrying a hare from the engraving "Eagle bringing a young woman a hare" by
-the Monogrammist B (Italy, 17th century), Rijksmuseum, public domain (CC0).
+The icon, a download arrow going into a tray, was drawn for Haul (2026) and is under the GPL-2.0
+like the rest.

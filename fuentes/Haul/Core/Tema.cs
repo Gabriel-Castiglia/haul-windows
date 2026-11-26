@@ -18,8 +18,8 @@ using Microsoft.Win32;
 
 namespace Haul.Core;
 
-// An accent colour: the tile of the icon (icono/accents/haul_<key>.ico, drawn by scripts/make_icon.py with the
-// same keys, the deeper tone as the tile) and the highlight colour of the window. The deeper tone is used on a
+// An accent colour: the tile of the icon (icono/accents/haul_<key>.ico, drawn from assets/icon.svg by the author's icon
+// tool with the same keys, the deeper tone as the tile) and the highlight colour of the window. The deeper tone is used on a
 // light window and under white text; the brighter one for highlights on a dark window.
 public sealed record ColorTema(string Clave, string Es, string En, Color Hondo, Color Vivo)
 {

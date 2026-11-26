@@ -1,7 +1,7 @@
 Haul para Windows
 =================
 
-Gabriel Castiglia · 26 de noviembre de 2026 · versión 1.7.3 · GPL-2.0-only · hecho y probado con
+Gabriel Castiglia · 27 de noviembre de 2026 · versión 1.7.4 · GPL-2.0-only · hecho y probado con
 yt-dlp 2026.11.23
 
 English (README.txt) · Español
@@ -166,11 +166,10 @@ Estructura del repositorio
 --------------------------
 
   Ruta                                                                        Contenido
-  --------------------------------------------------------------------------- -----------------------------------------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------- -----------------------------------------------------------------------------------------------------------------------
   fuentes/Haul/                                                               Código de la aplicación (C#, WPF sobre .NET 10)
   fuentes/Haul/Core/                                                          Cola y su copia guardada, listas, enlaces, preferencias, actualizaciones y el proceso de yt-dlp
-  assets/                                                                     El grabado del que sale el ícono
-  scripts/make_icon.py                                                        Dibuja el ícono en sus doce colores (Python 3 con numpy, opencv-python, scipy y Pillow); el mismo script hace el ícono de la versión de macOS
+  assets/icon.svg                                                             El dibujo del ícono (en sus doce colores lo arma la herramienta de íconos del autor, la misma de la versión de macOS)
   icono/Haul.ico, icono/icono-256.png, icono/icono-1024.png, icono/accents/   El ícono, en su naranja de siempre y en cada color
   scripts/screenshots.ps1                                                     Dibuja las imágenes de la ventana en docs/images, con datos de ejemplo
   installer/Msi/                                                              El paquete MSI (WiX)
@@ -349,5 +348,5 @@ Haul incluye una copia sin modificar de yt-dlp en vendor/yt-dlp, que conserva su
 (Unlicense, más las de los componentes dentro de yt-dlp.exe) y no está cubierta por la GPL. Haul
 ejecuta yt-dlp y ffmpeg como programas separados y no se enlaza con ellos; ffmpeg no se incluye.
 
-El ícono es el águila que trae una liebre del grabado «Águila que le trae una liebre a una joven»,
-del Monogramista B (Italia, siglo XVII), Rijksmuseum, dominio público (CC0).
+El ícono, una flecha de descarga que entra en una bandeja, se dibujó para Haul (2026) y está bajo la
+GPL-2.0 como el resto.
