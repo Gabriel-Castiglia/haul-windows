@@ -107,6 +107,27 @@ public static class Actualizacion
         return bien;
     }
 
+    // Opens the file for reading without sharing write or delete access, and keeps it open only if its hash is the
+    // expected one; otherwise deletes it and returns null. While the stream is open no other program can change,
+    // replace or delete the file, but it can still be read and run.
+    public static FileStream? AbrirVerificado(string ruta, string esperado)
+    {
+        FileStream? f = null;
+        try
+        {
+            f = new FileStream(ruta, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (string.Equals(Convert.ToHexString(SHA256.HashData(f)), esperado, StringComparison.OrdinalIgnoreCase))
+            {
+                f.Position = 0;
+                return f;
+            }
+        }
+        catch { /* missing or unreadable: not verified */ }
+        f?.Dispose();
+        try { File.Delete(ruta); } catch { /* already gone */ }
+        return null;
+    }
+
     // Downloads one file of a release to "ruta" after reading its hash from the release's checksum list, and
     // checks it. Throws, leaving no file behind, if the list does not name it or the hash does not match.
     // "progreso" receives the percentage, or -1 when the size is unknown. Returns the expected hash, so the file can be
@@ -118,11 +139,9 @@ public static class Actualizacion
         using var http = Cliente(TimeSpan.FromMinutes(15));
         var bytesSumas = await http.GetByteArrayAsync(urlSumas);
         if (urlFirma != null && !ReleaseSignature.Valid(bytesSumas, await http.GetStringAsync(urlFirma)))
-            throw new InvalidDataException(Loc.tr("La firma de esta versión no es válida: no se bajó ni se instaló nada. Se puede bajar a mano desde su página.",
-                                                  "The signature of this release is not valid: nothing was downloaded or installed. It can be downloaded by hand from its page."));
+            throw new InvalidDataException(Loc.T("BadSignature"));
         var esperado = HashDe(System.Text.Encoding.UTF8.GetString(bytesSumas), nombre)
-                       ?? throw new InvalidDataException(Loc.tr($"La lista de sumas de comprobación no nombra {nombre}.",
-                                                                $"The checksum list does not name {nombre}."));
+                       ?? throw new InvalidDataException(Loc.T("NotInChecksums", nombre));
         Directory.CreateDirectory(Path.GetDirectoryName(ruta)!);
         try
         {
@@ -134,8 +153,7 @@ public static class Actualizacion
             throw;
         }
         if (!Verificar(ruta, esperado))
-            throw new InvalidDataException(Loc.tr($"{nombre} no coincide con su suma de comprobación: se borró sin ejecutarlo.",
-                                                  $"{nombre} does not match its checksum: it was deleted without running it."));
+            throw new InvalidDataException(Loc.T("ChecksumMismatch", nombre));
         return esperado;
     }
 

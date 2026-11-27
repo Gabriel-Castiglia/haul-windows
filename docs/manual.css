@@ -1,8 +1,8 @@
 /*
- * manual.css: stylesheet for Haul's PDF manuals (used by scripts/manual.ps1).
+ * manual.css: stylesheet for Haul's PDF manuals (used by scripts/manual.sh).
  *
  * Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
- * Date: October 20, 2026
+ * Date: October 20, 2026 (Haul's own colours, cover, contents, pictures and Japanese: November 27, 2026)
  * SPDX-License-Identifier: GPL-2.0-only
  *
  * This program is free software: you can redistribute it and/or modify it under the terms of
@@ -10,61 +10,112 @@
  * It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
  */
 
-@page { size: A4; margin: 20mm 18mm 22mm; }
+@page {
+    size: A4;
+    margin: 18mm 18mm 20mm;
+    @bottom-center {
+        content: counter(page);
+        font-family: "Segoe UI", sans-serif;
+        font-size: 8.5pt;
+        color: #6b6f75;
+    }
+}
+/* The cover page has no number. */
+@page :first { @bottom-center { content: none; } }
 
+/*
+ * The colours of Haul's light window with its default colour, orange (Tema.cs: "ember", D9652F), so the manual
+ * looks like the program it describes. Text in orange uses a darker tone, which reads well on white.
+ */
 :root {
-    --texto: #1d2125;
-    --suave: #5b636b;
-    --acento: #1e8e45;
-    --linea: #dfe3e6;
-    --fondo-codigo: #f4f6f7;
+    --texto: #1d1d1f;
+    --suave: #6b6f75;
+    --acento: #d9652f;        /* the orange of the icon and of the buttons */
+    --acento-texto: #b04a17;  /* the same orange, darker, for headings and links */
+    --acento-suave: #fbe9df;  /* the orange at 15 % over white */
+    --linea: #e6e1dd;
+    --fondo-codigo: #f6f4f2;
 }
 
 html { font-size: 10.5pt; }
 
 body {
-    font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, "Helvetica Neue", sans-serif;
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Yu Gothic UI", "Meiryo UI", -apple-system, "Helvetica Neue", sans-serif;
     color: var(--texto);
     line-height: 1.5;
     max-width: none;
     margin: 0;
+    padding: 0;
 }
+/* Japanese: a Japanese typeface first (Latin letters included), a little more line spacing. */
+html[lang="ja"] body {
+    font-family: "Yu Gothic UI", "Yu Gothic", "Meiryo", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
+    line-height: 1.7;
+    line-break: strict;
+}
+
+/* ---- Cover and contents: the first page ---- */
 
 .portada {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding-bottom: 14px;
-    margin-bottom: 18px;
-    border-bottom: 2px solid var(--acento);
+    text-align: center;
+    padding: 16mm 0 9mm;
+    margin-bottom: 8mm;
+    border-bottom: 3px solid var(--acento);
 }
-.portada img { width: 64px; height: 64px; }
-.portada .nombre { font-size: 22pt; font-weight: 700; margin: 0; }
-.portada .repo { margin: 2px 0 0; color: var(--suave); }
+.portada img { width: 46mm; height: 46mm; }
+.portada .nombre { font-size: 34pt; font-weight: 700; margin: 4mm 0 0; letter-spacing: 0.5px; }
+.portada .subtitulo { font-size: 13pt; margin: 1mm 0 0; color: var(--texto); }
+.portada .version { margin: 3mm 0 0; color: var(--suave); }
+.portada .repo { margin: 1mm 0 0; }
 
 /* The README title is hidden: the cover block replaces it. */
-body > h1:first-of-type { display: none; }
+body > h1:first-of-type, header#title-block-header { display: none; }
+
+nav#TOC { break-after: page; }
+nav#TOC h2 { margin-top: 0; }
+nav#TOC ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 10mm; }
+nav#TOC li { padding: 1.5px 0; break-inside: avoid; }
+nav#TOC a { color: var(--texto); }
+nav#TOC a::before { content: "›  "; color: var(--acento); }
+
+/* ---- Text ---- */
 
 h2 {
-    font-size: 14pt;
-    color: var(--acento);
-    margin: 22px 0 6px;
+    font-size: 15pt;
+    color: var(--acento-texto);
+    margin: 24px 0 8px;
     padding-bottom: 3px;
     border-bottom: 1px solid var(--linea);
     break-after: avoid;
 }
+h3 { font-size: 11.5pt; margin: 16px 0 4px; break-after: avoid; }
 
 p, li { orphans: 3; widows: 3; }
+p { margin: 0 0 8px; }
+li { margin: 2px 0; }
 
-a { color: var(--acento); text-decoration: none; }
+a { color: var(--acento-texto); text-decoration: none; }
+
+strong { font-weight: 650; }
+
+blockquote {
+    margin: 10px 0;
+    padding: 6px 12px;
+    border-left: 4px solid var(--acento);
+    background: var(--acento-suave);
+    border-radius: 0 6px 6px 0;
+    break-inside: avoid;
+}
+blockquote p { margin: 0; }
 
 code {
     font-family: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
-    font-size: 0.88em;
+    font-size: 0.86em;
     background: var(--fondo-codigo);
     padding: 1px 4px;
     border-radius: 3px;
 }
+html[lang="ja"] code { font-family: "Cascadia Mono", Consolas, "BIZ UDGothic", "MS Gothic", monospace; }
 
 pre {
     background: var(--fondo-codigo);
@@ -77,13 +128,33 @@ pre {
 }
 pre code { background: none; padding: 0; }
 
+/* ---- Tables ---- */
+
 table {
     width: 100%;
     border-collapse: collapse;
     margin: 8px 0 12px;
-    font-size: 0.92em;
-    break-inside: avoid;
+    font-size: 0.9em;
 }
+tr { break-inside: avoid; }
+thead { display: table-header-group; }
 th, td { border: 1px solid var(--linea); padding: 5px 7px; text-align: left; vertical-align: top; }
-th { background: var(--fondo-codigo); }
+th { background: var(--acento-suave); font-weight: 650; }
 td code { overflow-wrap: anywhere; }
+/* File names in the first column stay whole: the column grows to fit them. */
+td:first-child code { overflow-wrap: normal; white-space: nowrap; }
+
+/* ---- Pictures: centered, never cut by a page break, short enough to keep the text around them ---- */
+
+p:has(> img:only-child) { break-inside: avoid; text-align: center; margin: 10px 0 12px; }
+p > img {
+    display: block;
+    margin: 0 auto;
+    box-sizing: border-box;
+    max-width: 80%;
+    max-height: 105mm;
+    border: 1px solid var(--linea);
+    border-radius: 6px;
+}
+/* The tall About window and the main window keep a reasonable size on the page. */
+img[alt*="About"], img[alt*="Acerca"] { max-height: 125mm; }

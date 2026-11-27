@@ -19,11 +19,9 @@ public enum Formato { Video, Audio }
 
 public static class Formatos
 {
-    public static string Titulo(Formato f) => f == Formato.Video ? "Video" : tr("Solo audio", "Audio only");
+    public static string Titulo(Formato f) => T(f == Formato.Video ? "Video" : "AudioOnly");
 
-    public static string Detalle(Formato f) =>
-        f == Formato.Video ? tr("MP4 · mejor calidad", "MP4 · best quality")
-                           : tr("MP3 · máxima calidad", "MP3 · highest quality");
+    public static string Detalle(Formato f) => T(f == Formato.Video ? "VideoDetail" : "AudioDetail");
 
     // yt-dlp arguments for each format, identical to the macOS version.
     public static string[] Argumentos(Formato f) => f switch

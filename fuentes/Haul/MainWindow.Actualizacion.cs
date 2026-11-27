@@ -34,8 +34,12 @@ namespace Haul;
 // touched: it finishes with the copy it started with.
 public partial class MainWindow
 {
+    // Set from the start of a check for a new Haul until it ends: the question, the download, the wait for the queue.
     private bool actualizando;
     private string? estadoPie;
+    // The verified setup program, held open without write or delete sharing from its last check until Haul exits, so
+    // nothing can replace it between that check and its start.
+    private FileStream? instaladorBloqueado;
 
     // A short note after the version line at the bottom of the window ("Downloading yt-dlp… 40 %"); null clears it.
     private void MostrarEstado(string? texto)
@@ -46,11 +50,7 @@ public partial class MainWindow
 
     private void ActualizarPie()
     {
-        var pie = Herramientas.YtDlpActualizado
-            ? tr($"Haul {Herramientas.VersionHaul} · Motor: yt-dlp {Herramientas.VersionYtDlp}, actualizado por Haul",
-                 $"Haul {Herramientas.VersionHaul} · Engine: yt-dlp {Herramientas.VersionYtDlp}, updated by Haul")
-            : tr($"Haul {Herramientas.VersionHaul} · Motor: yt-dlp {Herramientas.VersionYtDlp}, incluido en la app",
-                 $"Haul {Herramientas.VersionHaul} · Engine: yt-dlp {Herramientas.VersionYtDlp}, bundled with the app");
+        var pie = T(Herramientas.YtDlpActualizado ? "FooterUpdated" : "FooterBundled", Herramientas.VersionHaul, Herramientas.VersionYtDlp);
         Pie.Text = estadoPie != null ? pie + " · " + estadoPie : pie;
     }
 
@@ -70,58 +70,64 @@ public partial class MainWindow
 
     public async Task BuscarActualizacionAsync(bool interactiva)
     {
-        if (actualizando) return;
+        if (actualizando)
+        {
+            // "Check for updates" pressed while a check, a download or the wait for the queue is under way.
+            if (interactiva) Avisar(T("UpdateInProgress"));
+            return;
+        }
         if (!interactiva && (!Ajustes.Datos.BuscarVersiones || !Toca(Ajustes.Datos.UltimaBusqueda))) return;
-        Ajustes.Datos.UltimaBusqueda = DateTime.UtcNow;   // even without network: at most one try a day
-        Ajustes.Guardar();
-        Actualizacion.Lanzamiento l;
+        actualizando = true;
         try
         {
-            if (interactiva) MostrarEstado(tr("Consultando GitHub…", "Asking GitHub…"));
-            l = await Versiones.UltimoAsync();
-        }
-        catch (Exception ex)
-        {
+            Ajustes.Datos.UltimaBusqueda = DateTime.UtcNow;   // even without network: at most one try a day
+            Ajustes.Guardar();
+            Actualizacion.Lanzamiento l;
+            try
+            {
+                if (interactiva) MostrarEstado(T("AskingGitHub"));
+                l = await Versiones.UltimoAsync();
+            }
+            catch (Exception ex)
+            {
+                MostrarEstado(null);
+                if (interactiva) Avisar(T("GitHubUnreachable", ex.Message), MessageBoxImage.Warning);
+                return;
+            }
             MostrarEstado(null);
-            if (interactiva) Avisar(tr("No se pudo consultar GitHub: ", "GitHub could not be reached: ") + ex.Message, MessageBoxImage.Warning);
-            return;
+            if (!Versiones.EsNueva(l) || Versiones.DeEtiqueta(l.Etiqueta) is not { } nueva)
+            {
+                if (interactiva) Avisar(T("LatestHaul", Versiones.Actual));
+                return;
+            }
+            if (!IsVisible) return;
+            var archivos = Versiones.Archivos(l);
+            int r = AcercaDe.PreguntarVersion(this, nueva, archivos != null);
+            if (r == AcercaDe.Novedades) Herramientas.Abrir(l.Pagina ?? Versiones.Pagina);
+            else if (r == AcercaDe.Ahora && archivos is { } a) await InstalarAsync(nueva, a.instalador, a.sumas, a.firma);
         }
-        MostrarEstado(null);
-        if (!Versiones.EsNueva(l) || Versiones.DeEtiqueta(l.Etiqueta) is not { } nueva)
+        finally
         {
-            if (interactiva) Avisar(tr($"Tenés la última versión de Haul ({Versiones.Actual}).", $"You have the latest version of Haul ({Versiones.Actual})."));
-            return;
+            actualizando = false;
         }
-        if (!IsVisible) return;
-        var archivos = Versiones.Archivos(l);
-        int r = AcercaDe.PreguntarVersion(this, nueva, archivos != null);
-        if (r == AcercaDe.Novedades) Herramientas.Abrir(l.Pagina ?? Versiones.Pagina);
-        else if (r == AcercaDe.Ahora && archivos is { } a) await InstalarAsync(nueva, a.instalador, a.sumas, a.firma);
     }
 
     private async Task InstalarAsync(Version nueva, string urlInstalador, string urlSumas, string urlFirma)
     {
-        actualizando = true;
         var instalador = Path.Combine(Versiones.CarpetaDescarga, Versiones.Instalador);
         try
         {
-            var progreso = new Progress<int>(p => MostrarEstado(p >= 0
-                ? tr($"Descargando Haul {nueva}… {p} %", $"Downloading Haul {nueva}… {p} %")
-                : tr($"Descargando Haul {nueva}…", $"Downloading Haul {nueva}…")));
+            var progreso = new Progress<int>(p => MostrarEstado(p >= 0 ? T("DownloadingHaulPercent", nueva, p) : T("DownloadingHaul", nueva)));
             var hash = await Actualizacion.DescargarVerificadoAsync(urlInstalador, urlSumas, Versiones.Instalador, instalador, progreso, urlFirma);
 
             if (cola.HayTrabajo)
             {
-                int r = Pregunta.Hacer(this, tr("Hay descargas en la cola", "There are downloads in the queue"),
-                    tr("Si actualizás ahora, la descarga en curso se detiene y sigue sola desde donde quedó cuando Haul vuelva a "
-                       + "abrirse, con el resto de la cola. También podés esperar a que la cola termine.",
-                       "If you update now, the running download stops and carries on from where it was when Haul opens again, "
-                       + "with the rest of the queue. You can also wait for the queue to finish."),
-                    [tr("Cancelar", "Cancel"), tr("Cuando termine la cola", "When the queue ends"), tr("Actualizar ahora", "Update now")], 2);
+                int r = Pregunta.Hacer(this, T("QueueBusyTitle"), T("QueueBusyText"),
+                                       [T("Cancel"), T("WhenQueueEnds"), T("UpdateNow")], 2);
                 if (r == 0) { Terminar(null); return; }
                 if (r == 1)
                 {
-                    MostrarEstado(tr($"Haul {nueva} se instala cuando termine la cola", $"Haul {nueva} installs when the queue ends"));
+                    MostrarEstado(T("InstallsWhenQueueEnds", nueva));
                     while (cola.HayTrabajo)
                     {
                         await Task.Delay(1000);
@@ -130,11 +136,11 @@ public partial class MainWindow
                 }
             }
 
-            // The file is checked again right before it runs.
-            if (!Actualizacion.Verificar(instalador, hash))
-                throw new InvalidDataException(tr("El instalador cambió después de descargarlo: se borró sin ejecutarlo.",
-                                                  "The setup program changed after it was downloaded: it was deleted without running it."));
-            MostrarEstado(tr($"Instalando Haul {nueva}…", $"Installing Haul {nueva}…"));
+            // The file is checked again right before it runs, and stays open without write or delete sharing until Haul
+            // exits: nothing can change it between this check and the start of the setup program.
+            instaladorBloqueado = Actualizacion.AbrirVerificado(instalador, hash)
+                                  ?? throw new InvalidDataException(T("SetupChanged"));
+            MostrarEstado(T("InstallingHaul", nueva));
             Directory.CreateDirectory(Ajustes.Carpeta);
             File.WriteAllText(Versiones.ArchivoPendiente, nueva.ToString());
             var psi = new ProcessStartInfo(instalador) { UseShellExecute = true };
@@ -146,14 +152,15 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            instaladorBloqueado?.Dispose();
+            instaladorBloqueado = null;
             try { File.Delete(Versiones.ArchivoPendiente); } catch { /* not written */ }
-            Terminar(tr("No se pudo actualizar Haul: ", "Haul could not be updated: ") + ex.Message);
+            Terminar(T("HaulNotUpdated", ex.Message));
         }
     }
 
     private void Terminar(string? error)
     {
-        actualizando = false;
         MostrarEstado(null);
         if (error != null) Avisar(error, MessageBoxImage.Warning);
     }
@@ -172,12 +179,9 @@ public partial class MainWindow
         catch { return; }
         if (Versiones.DeEtiqueta(texto) is not { } esperada) return;
         if (Versiones.Actual >= esperada)
-            MostrarEstado(tr($"Haul se actualizó a la versión {Versiones.Actual}", $"Haul was updated to version {Versiones.Actual}"));
+            MostrarEstado(T("HaulUpdatedTo", Versiones.Actual));
         else
-            Avisar(tr($"Haul {esperada} no se instaló (quizás no se dio el permiso de Windows). Sigue la versión {Versiones.Actual}; "
-                      + "podés probar de nuevo desde ⓘ › Buscar actualizaciones.",
-                      $"Haul {esperada} was not installed (perhaps Windows' permission was not given). Version {Versiones.Actual} "
-                      + "stays; you can try again from ⓘ › Check for updates."), MessageBoxImage.Warning);
+            Avisar(T("HaulNotInstalled", esperada, Versiones.Actual), MessageBoxImage.Warning);
     }
 
     // ---- yt-dlp ----
@@ -191,20 +195,15 @@ public partial class MainWindow
         Ajustes.Guardar();
         try
         {
-            var progreso = new Progress<int>(p => MostrarEstado(p >= 0
-                ? tr($"Descargando yt-dlp… {p} %", $"Downloading yt-dlp… {p} %") : tr("Descargando yt-dlp…", "Downloading yt-dlp…")));
+            var progreso = new Progress<int>(p => MostrarEstado(p >= 0 ? T("DownloadingYtDlpPercent", p) : T("DownloadingYtDlp")));
             var (nueva, version) = await MotorYtDlp.ActualizarAsync(progreso);
-            MostrarEstado(nueva ? tr($"yt-dlp actualizado a {version}", $"yt-dlp updated to {version}") : null);
-            return nueva
-                ? tr($"yt-dlp se actualizó a la versión {version}. Una descarga que ya estaba en curso termina con la versión anterior; las siguientes usan la nueva.",
-                     $"yt-dlp was updated to version {version}. A download already running finishes with the previous version; the next ones use the new one.")
-                : tr($"yt-dlp ya está en la última versión ({version}).", $"yt-dlp is already at the latest version ({version}).");
+            MostrarEstado(nueva ? T("YtDlpUpdatedShort", version) : null);
+            return T(nueva ? "YtDlpUpdated" : "YtDlpLatest", version);
         }
         catch (Exception ex)
         {
             MostrarEstado(null);
-            return tr($"No se pudo actualizar yt-dlp: {ex.Message} Se sigue usando la versión {Herramientas.VersionYtDlp}.",
-                      $"yt-dlp could not be updated: {ex.Message} Version {Herramientas.VersionYtDlp} is still in use.");
+            return T("YtDlpNotUpdated", ex.Message, Herramientas.VersionYtDlp);
         }
     }
 

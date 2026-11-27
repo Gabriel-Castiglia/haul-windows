@@ -98,7 +98,7 @@ internal sealed class SetupApplication : BootstrapperApplication
 
     /// <summary>
     /// The language of an installed Haul when there is one (uninstall, repair), otherwise the language of
-    /// Windows if it is Spanish, otherwise English. The user can change it in the window at any time.
+    /// Windows if it is Spanish or Japanese, otherwise English. The user can change it in the window at any time.
     /// </summary>
     private static UiLanguage InitialLanguage()
     {
@@ -108,7 +108,7 @@ internal sealed class SetupApplication : BootstrapperApplication
             if (key?.GetValue("Language") is string code && code.Length > 0) return Loc.FromCode(code);
         }
         catch { }
-        return System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es" ? UiLanguage.Es : UiLanguage.En;
+        return Loc.FromCode(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
     }
 
     /// <summary>
@@ -159,6 +159,8 @@ internal sealed class SetupApplication : BootstrapperApplication
             string folder = InstallFolder;
             string exe = Path.Combine(folder, "Haul.exe");
             if (!File.Exists(exe)) { engine.Log(LogLevel.Standard, "Haul setup: Haul.exe not found; not opened."); return; }
+            // Haul does not read "--actualizada" (it only labels this start): it tells whether the update worked
+            // from the update-pending.txt it wrote before running this setup (MainWindow.Actualizacion.cs).
             Process.Start(new ProcessStartInfo(exe, "--actualizada") { UseShellExecute = false, WorkingDirectory = folder });
             engine.Log(LogLevel.Standard, "Haul setup: opened Haul again.");
         }
@@ -329,8 +331,7 @@ internal sealed class SetupApplication : BootstrapperApplication
         string winget = FindWinget();
         if (winget == null)
         {
-            ToolsNote = Loc.tr("No se encontró winget. Instala «Instalador de aplicación» desde Microsoft Store y vuelve a ejecutar este programa para instalar FFmpeg y Deno.",
-                               "winget was not found. Install \"App Installer\" from the Microsoft Store and run this setup again to install FFmpeg and Deno.");
+            ToolsNote = Loc.T("NoWinget");
             engine.Log(LogLevel.Standard, "Haul setup: winget not found.");
             return;
         }
@@ -352,8 +353,7 @@ internal sealed class SetupApplication : BootstrapperApplication
             }
         }
         if (failed.Count > 0)
-            ToolsNote = string.Format(Loc.tr("winget no pudo instalar {0}. Haul lo necesita para descargar: vuelve a ejecutar este programa más tarde.",
-                                             "winget could not install {0}. Haul needs it to download: run this setup again later."), string.Join(", ", failed));
+            ToolsNote = Loc.T("WingetFailed", string.Join(", ", failed));
     }
 
     private static string FindWinget()

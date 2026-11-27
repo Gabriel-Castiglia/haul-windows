@@ -51,27 +51,22 @@ public static class Errores
     // language changes; anything not listed is shown unchanged.
     public static string Traducir(string mensaje)
     {
-        (string patron, string es, string en)[] conocidos =
+        (string patron, string clave)[] conocidos =
         [
-            ("unavailable", "El video no está disponible (borrado, privado o bloqueado).",
-                            "The video is unavailable (removed, private or blocked)."),
-            ("Private video", "Es un video privado.", "This is a private video."),
-            ("Sign in to confirm your age", "Pide confirmar la edad con una cuenta: no se puede descargar así.",
-                                            "Age confirmation with an account is required; it cannot be downloaded."),
-            ("Unsupported URL", "Ese sitio no está soportado por yt-dlp.", "That site is not supported by yt-dlp."),
-            ("is not a valid URL", "Eso no parece un enlace válido.", "That does not look like a valid link."),
-            ("Unable to download webpage", "No se pudo abrir la página: revisá la conexión.",
-                                           "The page could not be opened; check the connection."),
-            ("Requested format is not available", "Ese formato no está disponible para este video.",
-                                                  "That format is not available for this video."),
-            ("Sign in to confirm you", "El sitio pide verificar que no sos un robot: instalá la versión más nueva de Haul.",
-                                       "The site asks to confirm you are not a bot; install the latest version of Haul."),
-            ("does not have a videos tab", "Ese canal no tiene videos para bajar.", "That channel has no videos to download."),
-            ("The playlist does not exist", "La lista no existe o es privada.", "The playlist does not exist or is private."),
+            ("unavailable", "ErrUnavailable"),
+            ("Private video", "ErrPrivate"),
+            ("Sign in to confirm your age", "ErrAge"),
+            ("Unsupported URL", "ErrUnsupported"),
+            ("is not a valid URL", "ErrInvalidUrl"),
+            ("Unable to download webpage", "ErrWebpage"),
+            ("Requested format is not available", "ErrFormat"),
+            ("Sign in to confirm you", "ErrBot"),
+            ("does not have a videos tab", "ErrNoVideosTab"),
+            ("The playlist does not exist", "ErrNoPlaylist"),
         ];
-        foreach (var (patron, es, en) in conocidos)
+        foreach (var (patron, clave) in conocidos)
             if (mensaje.Contains(patron, StringComparison.OrdinalIgnoreCase))
-                return tr(es, en);
+                return T(clave);
         return mensaje;
     }
 }

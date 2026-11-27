@@ -1,5 +1,5 @@
 # build.ps1: builds Haul and its installers into dist\.
-#   haul-setup.exe  setup program in English and Spanish that contains the MSI
+#   haul-setup.exe  setup program in English, Spanish and Japanese that contains the MSI
 #   haul.msi        MSI package (silent install: msiexec /i haul.msi /qn)
 #
 # Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
@@ -45,7 +45,7 @@ if ($LASTEXITCODE) { throw 'App publish failed.' }
 dotnet build (Join-Path $root 'installer\Msi\Haul.Msi.wixproj') -c Release -o $dist -p:PublishDir=$publish -p:Version=$version
 if ($LASTEXITCODE) { throw 'MSI build failed.' }
 
-# 4) The setup window (English and Spanish), then the setup .exe that carries it and the MSI.
+# 4) The setup window (English, Spanish and Japanese), then the setup .exe that carries it and the MSI.
 $setupUi = Join-Path $root 'build\setupui\'
 dotnet build (Join-Path $root 'installer\SetupUI\HaulSetup.csproj') -c Release -o $setupUi
 if ($LASTEXITCODE) { throw 'Setup window build failed.' }

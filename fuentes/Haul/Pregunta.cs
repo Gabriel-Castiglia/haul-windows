@@ -27,6 +27,7 @@ public sealed class Pregunta : Window
     {
         Respuesta = cancelar;
         Title = "Haul";
+        Haul.Core.Loc.Aplicar(this);
         Width = 460;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;

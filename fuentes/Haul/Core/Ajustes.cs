@@ -17,9 +17,10 @@ using System.Text.Json.Serialization;
 
 namespace Haul.Core;
 
-public enum Idioma { En, Es }
+public enum Idioma { En, Es, Ja }
 
-// Interface language. English is the default on first launch; the choice is remembered.
+// Interface language. On first launch it is the language chosen in the setup window or, without one, the language of
+// Windows when it is Spanish or Japanese (English otherwise); the choice is remembered. The texts live in Textos.cs.
 public static class Loc
 {
     private static Idioma actual = Idioma.En;
@@ -34,17 +35,55 @@ public static class Loc
         {
             if (actual == value) return;
             actual = value;
-            Ajustes.Datos.Idioma = value == Idioma.Es ? "es" : "en";
+            Ajustes.Datos.Idioma = Codigo(value);
             Ajustes.Guardar();
             Cambio?.Invoke();
         }
     }
 
-    public static void Iniciar() =>
-        actual = Ajustes.Datos.Idioma == "es" ? Idioma.Es : Idioma.En;
+    public static void Iniciar() => actual = DesdeCodigo(Ajustes.Datos.Idioma);
 
-    // Returns the text for the current interface language.
-    public static string tr(string es, string en) => actual == Idioma.Es ? es : en;
+    // Settings code of a language ("en", "es" or "ja"); anything unknown means English.
+    public static string Codigo(Idioma i) => i switch { Idioma.Es => "es", Idioma.Ja => "ja", _ => "en" };
+    public static Idioma DesdeCodigo(string? codigo) => codigo?.Trim().ToLowerInvariant() switch
+    {
+        "es" => Idioma.Es, "ja" => Idioma.Ja, _ => Idioma.En,
+    };
+
+    // The language of Windows' interface, when Haul speaks it; null otherwise.
+    public static string? CodigoDeWindows()
+    {
+        var c = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return c is "es" or "ja" ? c : null;
+    }
+
+    public static IReadOnlyDictionary<string, string> Tabla(Idioma i) => i switch
+    {
+        Idioma.Es => Textos.Es, Idioma.Ja => Textos.Ja, _ => Textos.En,
+    };
+
+    // The text for the current interface language; a key missing from it falls back to English, then to the key.
+    public static string T(string clave) =>
+        Tabla(actual).TryGetValue(clave, out var t) || Textos.En.TryGetValue(clave, out t) ? t : clave;
+
+    // The same, with "{0}", "{1}"… filled in.
+    public static string T(string clave, params object?[] valores) =>
+        string.Format(System.Globalization.CultureInfo.InvariantCulture, T(clave), valores);
+
+    // The language and the fonts of a window: Japanese text uses Windows' Japanese interface fonts, and the language
+    // tag picks Japanese glyph shapes and line breaking.
+    public static void Aplicar(System.Windows.FrameworkElement ventana)
+    {
+        ventana.Language = System.Windows.Markup.XmlLanguage.GetLanguage(actual switch
+        {
+            Idioma.Es => "es", Idioma.Ja => "ja-JP", _ => "en-US",
+        });
+        if (actual == Idioma.Ja)
+            ventana.SetValue(System.Windows.Documents.TextElement.FontFamilyProperty,
+                             new System.Windows.Media.FontFamily("Yu Gothic UI, Meiryo UI, Segoe UI"));
+        else
+            ventana.ClearValue(System.Windows.Documents.TextElement.FontFamilyProperty);
+    }
 }
 
 // Preferences stored in %APPDATA%\Haul\settings.json. It can be deleted to reset everything.
@@ -103,8 +142,12 @@ public static class Ajustes
                 Datos = JsonSerializer.Deserialize<Valores>(File.ReadAllText(Archivo), Opciones) ?? new();
                 Datos.Apariencia ??= "dark";
             }
-            else if (Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"Software\Haul")?.GetValue("Language") is "es")
-                Datos.Idioma = "es"; // first start after setup: the language chosen in the setup window
+            else
+            {
+                // First start: the language chosen in the setup window or, without a setup, the language of Windows.
+                var elegido = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"Software\Haul")?.GetValue("Language") as string;
+                Datos.Idioma = Loc.Codigo(Loc.DesdeCodigo(string.IsNullOrWhiteSpace(elegido) ? Loc.CodigoDeWindows() : elegido));
+            }
         }
         catch
         {

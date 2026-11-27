@@ -19,7 +19,7 @@ namespace Haul;
 public partial class App : Application
 {
     // Test option (not shown to users): "--captura <file.png>" draws a window into a PNG and exits, without
-    // writing the settings; "--ventana main|tema|acerca|aviso" picks the window, and "--idioma en|es",
+    // writing the settings; "--ventana main|tema|acerca|aviso" picks the window, and "--idioma en|es|ja",
     // "--tema light|dark" and "--color <key>" override the stored language, appearance and colour.
     // The pictures use the default settings, an example queue and no clipboard, so they show nothing of the
     // computer they were drawn on.

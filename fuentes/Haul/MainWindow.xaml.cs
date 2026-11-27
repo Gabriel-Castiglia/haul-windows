@@ -69,8 +69,7 @@ public partial class MainWindow : Window
         // The queue left when Haul last closed comes back first; a download that was running starts again from
         // its partial files.
         if (!cola.Abrir(ColaGuardada.Archivo))
-            MostrarEstado(tr("La cola guardada estaba dañada y se apartó como queue.damaged.json",
-                             "The saved queue was damaged and was set aside as queue.damaged.json"));
+            MostrarEstado(T("QueueDamaged"));
         // Launching with links from a terminal or a shortcut:
         //   Haul.exe --descargar URL [URL…]
         int i = Array.IndexOf(argumentos, "--descargar");
@@ -140,52 +139,50 @@ public partial class MainWindow : Window
         var activas = new List<string>();
         if (!abierto)
         {
-            if (cola.ListaEntera) activas.Add(tr("listas enteras", "whole playlists"));
-            if (cola.Instrumentales) activas.Add(tr("instrumentales", "instrumentals"));
-            if (cola.LimpiarSola) activas.Add(tr("limpiar terminadas", "clear finished"));
+            if (cola.ListaEntera) activas.Add(T("OnWholePlaylists"));
+            if (cola.Instrumentales) activas.Add(T("OnInstrumentals"));
+            if (cola.LimpiarSola) activas.Add(T("OnClearFinished"));
         }
-        TextoOpciones.Text = tr("Opciones", "Options") + (activas.Count > 0 ? ": " + string.Join(" · ", activas) : "");
-        System.Windows.Automation.AutomationProperties.SetName(BotonOpciones, tr("Opciones", "Options"));
+        TextoOpciones.Text = T("Options") + (activas.Count > 0 ? ": " + string.Join(" · ", activas) : "");
+        System.Windows.Automation.AutomationProperties.SetName(BotonOpciones, T("Options"));
     }
 
 
     private void AplicarTextos()
     {
-        SelectorIdioma.SelectedIndex = Actual == Idioma.Es ? 1 : 0;
-        SelectorIdioma.ToolTip = tr("Idioma", "Language");
-        BotonAcercaDe.ToolTip = tr("Acerca de Haul", "About Haul");
-        BotonTema.ToolTip = tr("Apariencia y color", "Appearance and colour");
+        Loc.Aplicar(this);
+        SelectorIdioma.SelectedIndex = (int)Actual;
+        SelectorIdioma.ToolTip = T("Language");
+        BotonAcercaDe.ToolTip = T("AboutHaul");
+        BotonTema.ToolTip = T("AppearanceAndColour");
         System.Windows.Automation.AutomationProperties.SetName(BotonTema, (string)BotonTema.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(BotonAcercaDe, (string)BotonAcercaDe.ToolTip);
-        Sugerencia.Text = tr("Pegá uno o varios enlaces, uno por línea", "Paste one or more links, one per line");
-        BotonBorrar.Content = tr("Borrar", "Clear");
-        TextoPegar.Text = tr("Pegar", "Paste");
+        Sugerencia.Text = T("LinksHint");
+        BotonBorrar.Content = T("Clear");
+        TextoPegar.Text = T("Paste");
         TituloVideo.Text = Formatos.Titulo(Formato.Video);
         DetalleVideo.Text = Formatos.Detalle(Formato.Video);
         TituloAudio.Text = Formatos.Titulo(Formato.Audio);
         DetalleAudio.Text = Formatos.Detalle(Formato.Audio);
         OpcionVideo.IsChecked = cola.Formato == Formato.Video;
         OpcionAudio.IsChecked = cola.Formato == Formato.Audio;
-        TextoGuardarEn.Text = tr("Guardar en", "Save to");
-        BotonCambiar.Content = tr("Cambiar…", "Change…");
-        BotonAbrirCarpeta.ToolTip = tr("Abrir la carpeta en el Explorador", "Open the folder in File Explorer");
+        TextoGuardarEn.Text = T("SaveTo");
+        BotonCambiar.Content = T("Change");
+        BotonAbrirCarpeta.ToolTip = T("OpenFolder");
         System.Windows.Automation.AutomationProperties.SetName(BotonAbrirCarpeta, (string)BotonAbrirCarpeta.ToolTip);
-        System.Windows.Automation.AutomationProperties.SetName(SelectorIdioma, tr("Idioma", "Language"));
-        TituloCola.Text = tr("Cola", "Queue");
-        BotonCancelarTodo.Content = tr("Cancelar todo", "Cancel all");
-        BotonPausarTodo.Content = tr("Pausar todo", "Pause all");
-        BotonSeguirTodo.Content = tr("Seguir todo", "Resume all");
-        BotonReintentarTodas.Content = tr("Reintentar todas", "Retry all");
-        OpcionListaEntera.Content = tr("Bajar listas enteras", "Download whole playlists");
-        OpcionListaEntera.ToolTip = tr("Activado, un video que está dentro de una lista trae la lista entera; desactivado, pregunta cada vez",
-                                       "When on, a video that is part of a playlist brings the whole playlist; when off, it asks every time");
-        OpcionLimpiar.Content = tr("Limpiar terminadas automáticamente", "Clear finished automatically");
-        OpcionLimpiar.ToolTip = tr("Activado, cada descarga terminada sale sola de la lista",
-                                   "When on, every finished download leaves the list by itself");
-        OpcionInstrumentales.Content = tr("Descargar instrumentales", "Download instrumentals");
+        System.Windows.Automation.AutomationProperties.SetName(SelectorIdioma, T("Language"));
+        TituloCola.Text = T("Queue");
+        BotonCancelarTodo.Content = T("CancelAll");
+        BotonPausarTodo.Content = T("PauseAll");
+        BotonSeguirTodo.Content = T("ResumeAll");
+        BotonReintentarTodas.Content = T("RetryAll");
+        OpcionListaEntera.Content = T("WholePlaylists");
+        OpcionListaEntera.ToolTip = T("WholePlaylistsHelp");
+        OpcionLimpiar.Content = T("ClearFinished");
+        OpcionLimpiar.ToolTip = T("ClearFinishedHelp");
+        OpcionInstrumentales.Content = T("Instrumentals");
         MostrarOpciones();
-        OpcionInstrumentales.ToolTip = tr("Desactivado, los videos con «instrumental» en el título esperan en pausa",
-                                          "When off, videos with \"instrumental\" in the title wait, paused");
+        OpcionInstrumentales.ToolTip = T("InstrumentalsHelp");
         ActualizarPie();
 
         var faltan = new List<string>();
@@ -194,9 +191,7 @@ public partial class MainWindow : Window
         if (Herramientas.Deno == null) faltan.Add("deno");
         // The pictures for the README never show what this computer lacks.
         AvisoFaltantes.Visibility = faltan.Count > 0 && !App.Captura ? Visibility.Visible : Visibility.Collapsed;
-        TextoFaltantes.Text = tr(
-            $"Falta {string.Join(", ", faltan)}. Volvé a ejecutar haul-setup.exe, que instala FFmpeg y Deno con winget.",
-            $"{string.Join(", ", faltan)} missing. Run haul-setup.exe again; it installs FFmpeg and Deno with winget.");
+        TextoFaltantes.Text = T("Missing", string.Join(", ", faltan));
     }
 
     // ---- Window size and position, kept between sessions ----
@@ -238,7 +233,7 @@ public partial class MainWindow : Window
 
     private void Idioma_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (IsLoaded) Loc.Actual = SelectorIdioma.SelectedIndex == 1 ? Idioma.Es : Idioma.En;
+        if (IsLoaded && SelectorIdioma.SelectedIndex >= 0) Loc.Actual = (Idioma)SelectorIdioma.SelectedIndex;
     }
 
     private void AcercaDe_Click(object sender, RoutedEventArgs e) => AcercaDe.Mostrar(this);
@@ -261,7 +256,7 @@ public partial class MainWindow : Window
 
     private void Cambiar_Click(object sender, RoutedEventArgs e)
     {
-        var dialogo = new OpenFolderDialog { InitialDirectory = cola.Destino, Title = tr("Guardar en", "Save to") };
+        var dialogo = new OpenFolderDialog { InitialDirectory = cola.Destino, Title = T("SaveTo") };
         if (dialogo.ShowDialog(this) == true) cola.Destino = dialogo.FolderName;
     }
 
@@ -286,6 +281,45 @@ public partial class MainWindow : Window
     private void ReanudarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) cola.Reanudar(f); }
     private void AbrirFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender)?.Archivo is { } a) Herramientas.Abrir(a); }
     private void MostrarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender)?.Archivo is { } a) Herramientas.MostrarEnExplorador(a); }
+
+    // ---- Moving rows with the keyboard: Alt+Up and Alt+Down, or the row's menu (Shift+F10 or the menu key) ----
+
+    private void Fila_KeyDown(object sender, KeyEventArgs e)
+    {
+        // With Alt held, WPF reports the arrow as Key.System and the arrow itself in SystemKey.
+        if (Keyboard.Modifiers != ModifierKeys.Alt || e.Key != Key.System || Fila(sender) is not { } fila) return;
+        int paso = e.SystemKey switch { Key.Up => -1, Key.Down => 1, _ => 0 };
+        if (paso == 0) return;
+        e.Handled = true;
+        Desplazar(fila, paso);
+    }
+
+    private void SubirFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) Desplazar(f, -1); }
+    private void BajarFila_Click(object sender, RoutedEventArgs e) { if (Fila(sender) is { } f) Desplazar(f, 1); }
+
+    // The menu offers only the moves that are possible from where the row is.
+    private void Fila_MenuAbriendo(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not FrameworkElement { ContextMenu: { } menu } || Fila(sender) is not { } fila) return;
+        int i = cola.Elementos.IndexOf(fila);
+        if (menu.Items[0] is MenuItem subir) subir.IsEnabled = i > 0;
+        if (menu.Items[1] is MenuItem bajar) bajar.IsEnabled = i >= 0 && i < cola.Elementos.Count - 1;
+    }
+
+    // Moves the row and keeps the keyboard focus on it, so it can be moved again at once.
+    private void Desplazar(Elemento fila, int paso)
+    {
+        if (!cola.Desplazar(fila, paso)) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (ListaCola.ItemContainerGenerator.ContainerFromItem(fila) is ContentPresenter c
+                && VisualTreeHelper.GetChildrenCount(c) > 0 && VisualTreeHelper.GetChild(c, 0) is Border b)
+            {
+                b.Focus();
+                b.BringIntoView();
+            }
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
 
     // ---- Dragging rows to reorder the queue ----
 

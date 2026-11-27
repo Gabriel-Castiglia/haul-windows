@@ -1,6 +1,6 @@
 //
 //  SetupWindow.cs
-//  Haul setup: the setup window, in English and Spanish.
+//  Haul setup: the setup window, in English, Spanish and Japanese.
 //
 //  Copyright (C) 2026 Gabriel Castiglia. Licensed under the GNU GPL, version 2 only.
 //  Date: November 9, 2026
@@ -79,8 +79,12 @@ internal sealed class SetupWindow : Window
 
     private void Redraw()
     {
-        Title = tr("Instalación de Haul", "Haul Setup");
-        if (subtitle != null) subtitle.Text = tr("Una interfaz para yt-dlp  ·  versión ", "A front end for yt-dlp  ·  version ") + Version;
+        // Japanese text uses Windows' Japanese interface fonts; the language tag picks Japanese glyph shapes and
+        // line breaking.
+        Language = System.Windows.Markup.XmlLanguage.GetLanguage(Loc.Current == UiLanguage.Ja ? "ja-JP" : Loc.Current == UiLanguage.Es ? "es" : "en-US");
+        FontFamily = new FontFamily(Loc.Current == UiLanguage.Ja ? "Yu Gothic UI, Meiryo UI, Segoe UI" : "Segoe UI Variable Text, Segoe UI");
+        Title = T("Title");
+        if (subtitle != null) subtitle.Text = T("Subtitle", Version);
         redraw?.Invoke();
     }
 
@@ -108,14 +112,21 @@ internal sealed class SetupWindow : Window
         Grid.SetColumn(titles, 1);
         grid.Children.Add(titles);
 
-        // The language menu: its label carries both languages, so it can be found from either one.
+        // The language menu: its label carries the three languages, so it can be found from any of them.
         var language = new StackPanel { VerticalAlignment = VerticalAlignment.Top };
-        language.Children.Add(new TextBlock { Text = "Idioma / Language", FontSize = 11.5, Foreground = Brushes.DimGray, Margin = new Thickness(0, 0, 0, 3) });
+        var label = new TextBlock { FontSize = 11.5, Foreground = Brushes.DimGray, Margin = new Thickness(0, 0, 0, 3) };
+        label.Inlines.Add(new Run("Idioma / Language / "));
+        label.Inlines.Add(new Run("言語") { Language = System.Windows.Markup.XmlLanguage.GetLanguage("ja-JP"), FontFamily = new FontFamily("Yu Gothic UI, Meiryo UI") });
+        language.Children.Add(label);
         var combo = new ComboBox { Width = 120 };
         combo.Items.Add("English");
         combo.Items.Add("Español");
-        combo.SelectedIndex = Loc.Current == UiLanguage.Es ? 1 : 0;
-        combo.SelectionChanged += (s, e) => Loc.Current = combo.SelectedIndex == 1 ? UiLanguage.Es : UiLanguage.En;
+        combo.Items.Add(new ComboBoxItem
+        {
+            Content = "日本語", Language = System.Windows.Markup.XmlLanguage.GetLanguage("ja-JP"), FontFamily = new FontFamily("Yu Gothic UI, Meiryo UI"),
+        });
+        combo.SelectedIndex = (int)Loc.Current;
+        combo.SelectionChanged += (s, e) => { if (combo.SelectedIndex >= 0) Loc.Current = (UiLanguage)combo.SelectedIndex; };
         language.Children.Add(combo);
         Grid.SetColumn(language, 2);
         grid.Children.Add(language);
@@ -132,7 +143,7 @@ internal sealed class SetupWindow : Window
 
     public void ShowLoading() => Show(() =>
     {
-        Body(tr("Revisando este equipo…", "Checking this computer…"));
+        Body(T("Checking"));
         Buttons();
     });
 
@@ -143,54 +154,44 @@ internal sealed class SetupWindow : Window
             case SetupState.Install:
                 Show(() =>
                 {
-                    Body(tr("Haul se instalará para todos los usuarios en:", "Haul will be installed for all users in:"),
-                         InstallFolder, ToolsLine, LicenseLine());
-                    Buttons((tr("Instalar", "Install"), () => app?.Plan(LaunchAction.Install), true), CancelButton());
+                    Body(T("InstallIn"), InstallFolder, ToolsLine, LicenseLine());
+                    Buttons((T("Install"), () => app?.Plan(LaunchAction.Install), true), CancelButton());
                 });
                 break;
             case SetupState.Upgrade:
                 Show(() =>
                 {
-                    Body(string.Format(tr("Haul {0} está instalado. Se actualizará a la versión {1}; los ajustes de cada usuario se conservan.",
-                                          "Haul {0} is installed. It will be updated to version {1}; each user's settings are kept."),
-                                       OlderVersion, Version), null, ToolsLine, LicenseLine());
-                    Buttons((tr("Actualizar", "Update"), () => app?.Plan(LaunchAction.Install), true), CancelButton());
+                    Body(T("UpgradeText", OlderVersion, Version), null, ToolsLine, LicenseLine());
+                    Buttons((T("Update"), () => app?.Plan(LaunchAction.Install), true), CancelButton());
                 });
                 break;
             case SetupState.Maintenance:
                 Show(() =>
                 {
-                    Body(string.Format(tr("Haul {0} ya está instalado en este equipo.", "Haul {0} is already installed on this computer."), Version),
-                         null, tr("Reparar vuelve a copiar sus archivos; desinstalar lo quita del equipo.",
-                                  "Repair copies its files again; uninstall removes it from the computer."));
-                    Buttons((tr("Reparar", "Repair"), () => app?.Plan(LaunchAction.Repair), false),
-                            (tr("Desinstalar", "Uninstall"), () => app?.Plan(LaunchAction.Uninstall), false),
+                    Body(T("MaintenanceText", Version), null, T("MaintenanceNote"));
+                    Buttons((T("Repair"), () => app?.Plan(LaunchAction.Repair), false),
+                            (T("Uninstall"), () => app?.Plan(LaunchAction.Uninstall), false),
                             CloseButton(true));
                 });
                 break;
             case SetupState.Uninstall:
                 Show(() =>
                 {
-                    Body(tr("Haul se quitará de este equipo.", "Haul will be removed from this computer."), null,
-                         tr("Los archivos descargados y los ajustes de cada usuario (carpeta %APPDATA%\\Haul) se conservan, y FFmpeg y Deno siguen instalados.",
-                            "Downloaded files and each user's settings (the %APPDATA%\\Haul folder) are kept, and FFmpeg and Deno stay installed."));
-                    Buttons((tr("Desinstalar", "Uninstall"), () => app?.Plan(LaunchAction.Uninstall), true), CancelButton());
+                    Body(T("UninstallText"), null, T("UninstallNote"));
+                    Buttons((T("Uninstall"), () => app?.Plan(LaunchAction.Uninstall), true), CancelButton());
                 });
                 break;
             case SetupState.Newer:
                 Show(() =>
                 {
-                    Body(string.Format(tr("Ya está instalada una versión más nueva de Haul ({0}). Esta versión no se puede instalar encima.",
-                                          "A newer version of Haul ({0}) is already installed. This version cannot be installed over it."),
-                                       NewerVersion));
+                    Body(T("NewerText", NewerVersion));
                     Buttons(CloseButton(true));
                 });
                 break;
         }
     }
 
-    private static string ToolsLine => tr("Después instala o actualiza con winget FFmpeg y Deno, que yt-dlp necesita.",
-                                          "Then it installs or upgrades FFmpeg and Deno with winget, which yt-dlp needs.");
+    private static string ToolsLine => T("ToolsLine");
 
     public void ShowProgress(LaunchAction action)
     {
@@ -199,26 +200,29 @@ internal sealed class SetupWindow : Window
         {
             string text = action switch
             {
-                LaunchAction.Uninstall => tr("Desinstalando Haul…", "Uninstalling Haul…"),
-                LaunchAction.Repair => tr("Reparando Haul…", "Repairing Haul…"),
-                _ => OlderVersion != null ? tr("Actualizando Haul…", "Updating Haul…") : tr("Instalando Haul…", "Installing Haul…"),
+                LaunchAction.Uninstall => T("Uninstalling"),
+                LaunchAction.Repair => T("Repairing"),
+                _ => T(OlderVersion != null ? "Updating" : "Installing"),
             };
             var panel = BodyPanel(text);
             if (bar.Parent is Panel old) old.Children.Remove(bar);
             panel.Children.Add(bar);
             page.Content = panel;
-            Buttons((tr("Cancelar", "Cancel"), () => { if (app != null) app.Canceled = true; }, false));
+            Buttons((T("Cancel"), () => { if (app != null) app.Canceled = true; }, false));
         });
     }
+
+    /// <summary>Set while winget installs FFmpeg and Deno: Haul is already installed, so there is nothing to roll back.</summary>
+    private bool installingTools;
 
     /// <summary>Progress page while winget installs or upgrades FFmpeg and Deno; it cannot be canceled.</summary>
     public void ShowTools() => Show(() =>
     {
-        var panel = BodyPanel(tr("Instalando o actualizando FFmpeg y Deno con winget…", "Installing or upgrading FFmpeg and Deno with winget…"));
+        installingTools = true;
+        var panel = BodyPanel(T("ToolsProgress"));
         panel.Children.Add(new TextBlock
         {
-            Text = tr("yt-dlp los necesita para unir imagen y sonido y para resolver desafíos de JavaScript. Puede tardar unos minutos.",
-                      "yt-dlp needs them to join picture and sound and to solve JavaScript challenges. This can take a few minutes."),
+            Text = T("ToolsWhy"),
             Foreground = Brushes.DimGray, Margin = new Thickness(0, 10, 0, 10), TextWrapping = TextWrapping.Wrap,
         });
         if (bar.Parent is Panel old) old.Children.Remove(bar);
@@ -233,34 +237,34 @@ internal sealed class SetupWindow : Window
     public void ShowResult(bool ok, bool canceled, bool restart)
     {
         Applying = false;
+        installingTools = false;
         var action = app?.Planned ?? LaunchAction.Install;
         Show(() =>
         {
             if (canceled)
             {
-                Body(tr("Se canceló. El equipo quedó como estaba.", "Canceled. The computer was left as it was."));
+                Body(T("Canceled"));
                 Buttons(CloseButton(true));
                 return;
             }
             if (!ok)
             {
-                Body(tr("La operación no se pudo completar.", "The operation could not be completed."),
-                     null, ErrorText ?? app?.LastError);
-                Buttons((tr("Ver registro", "View log"), OpenLog, false), CloseButton(true));
+                Body(T("Failed"), null, ErrorText ?? app?.LastError);
+                Buttons((T("ViewLog"), OpenLog, false), CloseButton(true));
                 return;
             }
             string done = action switch
             {
-                LaunchAction.Uninstall => tr("Haul se desinstaló.", "Haul was uninstalled."),
-                LaunchAction.Repair => tr("Haul quedó reparado.", "Haul was repaired."),
-                _ => tr("Haul quedó instalado. Está en el menú Inicio.", "Haul is installed. It is in the Start menu."),
+                LaunchAction.Uninstall => T("Uninstalled"),
+                LaunchAction.Repair => T("Repaired"),
+                _ => T("Installed"),
             };
             bar.IsIndeterminate = false;
-            string note = restart ? tr("Hay que reiniciar Windows para terminar.", "Windows must be restarted to finish.") : null;
+            string note = restart ? T("Restart") : null;
             if (app?.ToolsNote != null) note = note == null ? app.ToolsNote : note + "\n\n" + app.ToolsNote;
             Body(done, null, note);
             if (action == LaunchAction.Install)
-                Buttons((tr("Abrir Haul", "Open Haul"), LaunchHaul, true), CloseButton(false));
+                Buttons((T("OpenHaul"), LaunchHaul, true), CloseButton(false));
             else
                 Buttons(CloseButton(true));
         });
@@ -288,15 +292,15 @@ internal sealed class SetupWindow : Window
 
     private UIElement LicenseLine()
     {
-        var link = new Hyperlink(new Run(tr("Licencia Pública General GNU, versión 2", "GNU General Public License, version 2")))
+        var link = new Hyperlink(new Run(T("LicenseName")))
         {
             NavigateUri = new Uri(LicenseUrl),
         };
         link.RequestNavigate += (s, e) => Open(LicenseUrl);
         var text = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DimGray, Margin = new Thickness(0, 16, 0, 0) };
-        text.Inlines.Add(new Run(tr("Haul es software libre, bajo la ", "Haul is free software, under the ")));
+        text.Inlines.Add(new Run(T("FreeBefore")));
         text.Inlines.Add(link);
-        text.Inlines.Add(new Run("."));
+        text.Inlines.Add(new Run(T("FreeAfter")));
         return text;
     }
 
@@ -311,11 +315,18 @@ internal sealed class SetupWindow : Window
         }
     }
 
-    private (string, Action, bool) CancelButton() => (tr("Cancelar", "Cancel"), Close, false);
-    private (string, Action, bool) CloseButton(bool isDefault) => (tr("Cerrar", "Close"), Close, isDefault);
+    private (string, Action, bool) CancelButton() => (T("Cancel"), Close, false);
+    private (string, Action, bool) CloseButton(bool isDefault) => (T("Close"), Close, isDefault);
 
     private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+        // During the FFmpeg and Deno step the window stays open: canceling there would only mark the setup as
+        // canceled ("the computer was left as it was") although Haul is already installed.
+        if (installingTools && app != null)
+        {
+            e.Cancel = true;
+            return;
+        }
         if (!Applying || app == null)
         {
             if (app != null && app.Planned == LaunchAction.Unknown) app.CancelBeforeStart();
@@ -323,7 +334,7 @@ internal sealed class SetupWindow : Window
         }
         // While installing, closing the window means canceling; the engine rolls the changes back.
         e.Cancel = true;
-        var answer = MessageBox.Show(this, tr("¿Cancelar la operación? Se deshará lo hecho hasta ahora.", "Cancel the operation? What was done so far will be undone."),
+        var answer = MessageBox.Show(this, T("CancelQuestion"),
                                      "Haul", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer == MessageBoxResult.Yes && app != null) app.Canceled = true;
     }

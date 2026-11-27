@@ -17,8 +17,10 @@ using Haul.Core;
 
 namespace Haul;
 
-// Haul.exe --self-test <log> [--red]: checks the saved queue (save, load, damaged file), the version logic of Haul
-// and of yt-dlp, and the checksums, with throw-away data in a temporary folder that is removed at the end. No
+// Haul.exe --self-test <log> [--red]: checks the interface texts of Haul and of its setup window (three tables with
+// the same keys and placeholders), the saved queue (save, load, damaged file), moving rows, the version logic of Haul
+// and of yt-dlp, the checksums and the release signature, playlist folder names, the arguments every yt-dlp
+// process starts with and the end of a process that leaves another one behind, with throw-away data in a temporary folder that is removed at the end. No
 // window is shown; the user's settings, queue and copies of yt-dlp are never read or written (the settings are
 // read-only and every path points into the temporary folder). The exit code is the number of failures. "--red"
 // adds the checks that ask GitHub for the latest releases and update yt-dlp for real, into the temporary folder;
@@ -38,6 +40,9 @@ public static class PruebaPropia
         Linea($"Haul {Herramientas.VersionHaul} self-test, {DateTime.Now:yyyy-MM-dd HH:mm:ss}; yt-dlp included: {Herramientas.VersionYtDlpIncluido}");
         try
         {
+            Bloque("Interface texts (Haul)", () => Tablas(Textos.En, Textos.Es, Textos.Ja));
+            Bloque("Interface texts (setup window)", () => Tablas(Haul.Setup.SetupTexts.En, Haul.Setup.SetupTexts.Es, Haul.Setup.SetupTexts.Ja));
+            Bloque("Interface language", Idiomas);
             Bloque("Versions (IsNewer)", Versiones_);
             Bloque("Checksums (HashFor)", Sumas_);
             Bloque("Release of Haul", LanzamientoHaul);
@@ -45,6 +50,9 @@ public static class PruebaPropia
             Bloque("Verified file", () => Verificado(Path.Combine(raiz, "verificar")));
             Bloque("Saved queue: file", () => ArchivoCola(Path.Combine(raiz, "cola")));
             Bloque("Saved queue: rows", () => FilasCola(Path.Combine(raiz, "filas")));
+            Bloque("Folder names and yt-dlp arguments", NombresYArgumentos);
+            Bloque("Rows: failing, moving, error colour", Filas);
+            Bloque("Process that leaves another one behind", Rezagado);
             if (red) Bloque("GitHub (network)", () => Red(Path.Combine(raiz, "red")));
             else Linea("SKIP GitHub (network): run with --red to include it");
         }
@@ -63,6 +71,129 @@ public static class PruebaPropia
     }
 
     // ---- Checks ----
+
+    // The three tables of a program: the same keys, no empty text, and for every key the same placeholders.
+    private static void Tablas(IReadOnlyDictionary<string, string> en, IReadOnlyDictionary<string, string> es, IReadOnlyDictionary<string, string> ja)
+    {
+        static string Faltan(IReadOnlyDictionary<string, string> a, IReadOnlyDictionary<string, string> b) =>
+            string.Join(", ", a.Keys.Where(k => !b.ContainsKey(k)));
+        Comprobar($"{en.Count} texts in English, none empty", en.Count > 0 && en.Values.All(t => t.Length > 0));
+        foreach (var (nombre, otra) in new[] { ("Spanish", es), ("Japanese", ja) })
+        {
+            var faltan = Faltan(en, otra);
+            var sobran = Faltan(otra, en);
+            Comprobar($"{nombre}: the same keys as English" + (faltan.Length > 0 ? "; missing: " + faltan : "") + (sobran.Length > 0 ? "; extra: " + sobran : ""),
+                      faltan.Length == 0 && sobran.Length == 0);
+            var distintos = en.Keys.Where(k => otra.TryGetValue(k, out var t) && Marcadores(t) != Marcadores(en[k])).ToList();
+            Comprobar($"{nombre}: the same placeholders as English" + (distintos.Count > 0 ? "; differ: " + string.Join(", ", distintos) : ""),
+                      distintos.Count == 0);
+            Comprobar($"{nombre}: no empty text", otra.Values.All(t => t.Length > 0));
+        }
+        var malos = en.Concat(es).Concat(ja).Where(p => !FormatoValido(p.Value)).Select(p => p.Key).Distinct().ToList();
+        Comprobar("every text is a valid format string" + (malos.Count > 0 ? "; not: " + string.Join(", ", malos) : ""), malos.Count == 0);
+    }
+
+    // The placeholders of a text, sorted ("{0}{1}").
+    private static string Marcadores(string t) =>
+        string.Concat(System.Text.RegularExpressions.Regex.Matches(t, @"\{\d+(?:[,:][^}]*)?\}").Select(m => m.Value).Order());
+
+    private static bool FormatoValido(string t)
+    {
+        try { _ = string.Format(t, "a", "b", "c", "d"); return true; }
+        catch (FormatException) { return false; }
+    }
+
+    private static void Idiomas()
+    {
+        var antes = Loc.Actual;
+        try
+        {
+            Comprobar("codes: en, es, ja; anything else is English", Loc.DesdeCodigo("ja") == Idioma.Ja && Loc.DesdeCodigo("ES") == Idioma.Es
+                      && Loc.DesdeCodigo("en") == Idioma.En && Loc.DesdeCodigo("fr") == Idioma.En && Loc.DesdeCodigo(null) == Idioma.En
+                      && Loc.Codigo(Idioma.Ja) == "ja" && Loc.Codigo(Idioma.Es) == "es" && Loc.Codigo(Idioma.En) == "en");
+            Loc.Actual = Idioma.Ja;
+            Comprobar("Japanese texts", Loc.T("Queue") == "キュー" && Loc.T("SummaryDone", 2, 5) == "5 件中 2 件完了");
+            Loc.Actual = Idioma.Es;
+            Comprobar("Spanish texts", Loc.T("Queue") == "Cola" && Loc.T("SummaryDone", 2, 5) == "2 de 5 listas");
+            Loc.Actual = Idioma.En;
+            Comprobar("English texts", Loc.T("Queue") == "Queue" && Loc.T("SummaryDone", 2, 5) == "2 of 5 done");
+            Comprobar("an unknown key shows itself", Loc.T("No such key") == "No such key");
+        }
+        finally { Loc.Actual = antes; }
+    }
+
+    private static void Filas()
+    {
+        // An error line on the last attempt leaves the row running: it turns red only when yt-dlp exits, so it cannot
+        // be removed or retried while yt-dlp still runs.
+        var e = new Elemento("https://www.example.com/watch?v=x", Formato.Video, Path.GetTempPath()) { Reintentos = Elemento.MaxReintentos };
+        e.Etapa = Etapa.Bajando;
+        e.Procesar("ERROR: [site] x: Video unavailable");
+        Comprobar("an error line does not end a running row", e.Etapa == Etapa.Bajando && e.Fallo == "Video unavailable"
+                  && !e.PuedeQuitar && !e.PuedeReintentar && e.PuedeCancelar);
+
+        var cola = new Cola();
+        var carpeta = Path.GetTempPath();
+        cola.Restaurar(new EstadoCola { Filas = [new() { Enlace = "https://www.example.com/watch?v=1", Destino = carpeta },
+                                                 new() { Enlace = "https://www.example.com/watch?v=2", Destino = carpeta },
+                                                 new() { Enlace = "https://www.example.com/watch?v=3", Destino = carpeta }] }, arrancar: false);
+        var f = cola.Elementos;
+        string Orden() => string.Concat(f.Select(x => x.Enlace[^1]));
+        var primera = f[0];
+        Comprobar("Alt+Down: one place down", cola.Desplazar(primera, 1) && Orden() == "213");
+        Comprobar("Alt+Up: one place up", cola.Desplazar(primera, -1) && Orden() == "123");
+        Comprobar("nothing moves past either end", !cola.Desplazar(primera, -1) && !cola.Desplazar(f[2], 1) && Orden() == "123");
+
+        // The red of a failed row against the cards and the window, light and dark (WCAG AA for text: 4.5:1).
+        double c1 = Tema.Contraste(Tema.ErrorClaro, 0xFFFFFF), c2 = Tema.Contraste(Tema.ErrorClaro, 0xF3F3F3), c3 = Tema.Contraste(Tema.ErrorClaro, 0xFBFBFB);
+        Comprobar($"error red, light window: {c1:0.0}:1 on white, {c3:0.0}:1 on a card, {c2:0.0}:1 on the window", c1 >= 4.5 && c2 >= 4.5 && c3 >= 4.5);
+        double d1 = Tema.Contraste(Tema.ErrorOscuro, 0x2B2B2B), d2 = Tema.Contraste(Tema.ErrorOscuro, 0x202020);
+        Comprobar($"error red, dark window: {d1:0.0}:1 on a card, {d2:0.0}:1 on the window", d1 >= 4.5 && d2 >= 4.5);
+    }
+
+    // A process that exits while a child it started keeps its output open (as ffmpeg left behind by yt-dlp could):
+    // the wait ends after the grace time, off the calling thread, and the child is stopped with it.
+    private static void Rezagado()
+    {
+        var antes = ProcesoVigilado.Gracia;
+        ProcesoVigilado.Gracia = TimeSpan.FromSeconds(2);
+        try
+        {
+            var cmd = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+            System.Diagnostics.ProcessStartInfo Inicio(string orden)
+            {
+                // cmd reads its command line as it is, not with the quoting of ArgumentList.
+                return new System.Diagnostics.ProcessStartInfo(cmd, "/d /c " + orden)
+                {
+                    UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
+                };
+            }
+            // "start /b" runs ping inside the same console, with the same output handles, and cmd exits at once.
+            using var p = new ProcesoVigilado(Inicio("start \"\" /b \"" + Path.Combine(Environment.SystemDirectory, "PING.EXE") + "\" -n 60 127.0.0.1"), _ => { });
+            var reloj = System.Diagnostics.Stopwatch.StartNew();
+            p.Iniciar();
+            var espera = Task.Run(p.EsperarAsync);
+            // Never longer than half a minute, whatever goes wrong.
+            if (!espera.Wait(TimeSpan.FromSeconds(30))) { p.Detener(); Fallo("the process did not end"); return; }
+            var (codigo, detenido) = espera.Result;
+            reloj.Stop();
+            Comprobar($"the wait ended after the grace time ({reloj.Elapsed.TotalSeconds:0.0} s), stopping what was left",
+                      detenido && reloj.Elapsed < TimeSpan.FromSeconds(15));
+            Comprobar("exit code of the process itself", codigo == 0);
+
+            // A process that ends normally is not stopped and nothing waits for the grace time.
+            var lineas = new List<string>();
+            using var q = new ProcesoVigilado(Inicio("echo one& echo two& exit 3"), l => { lock (lineas) lineas.Add(l.Trim()); });
+            reloj.Restart();
+            q.Iniciar();
+            var espera2 = Task.Run(q.EsperarAsync);
+            if (!espera2.Wait(TimeSpan.FromSeconds(30))) { q.Detener(); Fallo("a normal process did not end"); return; }
+            var (codigo2, detenido2) = espera2.Result;
+            Comprobar("a normal end: its exit code and every line, no stop, no wait",
+                      codigo2 == 3 && !detenido2 && lineas.SequenceEqual(["one", "two"]) && reloj.Elapsed < TimeSpan.FromSeconds(2));
+        }
+        finally { ProcesoVigilado.Gracia = antes; }
+    }
 
     private static void Versiones_()
     {
@@ -140,19 +271,18 @@ public static class PruebaPropia
     {
         string incluida = "2026.08.19";
         Comprobar("no folder: the included copy", MotorYtDlp.Elegir(raiz, incluida) == null);
-        void Copia(string nombre, bool exe, bool marca)
+        // A folder named after a version exists only once its copy passed every check (MotorYtDlp.InstalarAsync).
+        void Copia(string nombre, bool exe)
         {
             var c = Path.Combine(raiz, nombre);
             Directory.CreateDirectory(c);
             if (exe) File.WriteAllText(Path.Combine(c, "yt-dlp.exe"), "test");
-            if (marca) File.WriteAllText(Path.Combine(c, "verified.txt"), "test");
         }
-        Copia("2026.07.01", true, true);       // older than the included one
-        Copia("2026.09.30", true, true);       // the newest verified
-        Copia("2026.10.15", true, false);      // newer but never verified
-        Copia("2026.11.01", false, true);      // no executable
-        Copia("2026.12.01.download", true, true); // a download that did not finish
-        Copia("notes", true, true);            // not a version
+        Copia("2026.07.01", true);             // older than the included one
+        Copia("2026.09.30", true);             // the newest verified
+        Copia("2026.11.01", false);            // no executable
+        Copia("2026.12.01.download", true);    // a download that did not finish
+        Copia("notes", true);                  // not a version
         var e = MotorYtDlp.Elegir(raiz, incluida);
         Comprobar("newest verified copy chosen", e is { } x && x.version == "2026.09.30" && x.ruta == Path.Combine(raiz, "2026.09.30", "yt-dlp.exe"));
         Comprobar("included newer than every copy: the included one", MotorYtDlp.Elegir(raiz, "2027.01.01") == null);
@@ -173,6 +303,33 @@ public static class PruebaPropia
         Comprobar("matching file kept", Actualizacion.Verificar(f, abc.ToUpperInvariant()) && File.Exists(f));
         Comprobar("mismatching file deleted", !Actualizacion.Verificar(f, new string('0', 64)) && !File.Exists(f));
         Comprobar("missing file is not verified", !Actualizacion.Verificar(f, abc));
+
+        // The setup program of an update: checked and held open until it runs.
+        var exe = Path.Combine(carpeta, "whoami.exe");
+        File.Copy(Path.Combine(Environment.SystemDirectory, "whoami.exe"), exe);
+        var esperado = Actualizacion.Sha256(exe);
+        using (var bloqueado = Actualizacion.AbrirVerificado(exe, esperado))
+        {
+            Comprobar("verified file held open", bloqueado != null && bloqueado.Position == 0);
+            bool escribe = true, borra = true, renombra = true;
+            try { using var w = new FileStream(exe, FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete); } catch (IOException) { escribe = false; }
+            try { File.Delete(exe); } catch (IOException) { borra = false; } catch (UnauthorizedAccessException) { borra = false; }
+            try { File.Move(exe, exe + ".old"); } catch (IOException) { renombra = false; } catch (UnauthorizedAccessException) { renombra = false; }
+            Comprobar("while held: it cannot be written, deleted or renamed", !escribe && !borra && !renombra && File.Exists(exe));
+            var psi = new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+            using var p = System.Diagnostics.Process.Start(psi)!;
+            p.StandardOutput.ReadToEnd();
+            Comprobar("while held: it can still run", p.WaitForExit(30000) && p.ExitCode == 0);
+        }
+        Comprobar("released: it can be deleted", Borrar(exe));
+        File.WriteAllText(f, "abc");
+        Comprobar("a file that does not match is not held and is deleted", Actualizacion.AbrirVerificado(f, new string('0', 64)) == null && !File.Exists(f));
+    }
+
+    private static bool Borrar(string ruta)
+    {
+        try { File.Delete(ruta); return !File.Exists(ruta); }
+        catch { return false; }
     }
 
     private static void ArchivoCola(string carpeta)
@@ -298,6 +455,19 @@ public static class PruebaPropia
         Comprobar("closing saves the queue", cerrada.Filas.Count == 1 && cerrada.Filas[0].Etapa == "Detenida");
     }
 
+    private static void NombresYArgumentos()
+    {
+        Comprobar("playlist folder: invalid characters replaced", Cola.NombreDeCarpeta("a/b:c?") == "a_b_c_");
+        Comprobar("playlist folder: trailing dots and spaces dropped", Cola.NombreDeCarpeta("Mix 2026. . ") == "Mix 2026");
+        Comprobar("playlist folder: reserved device names avoided",
+                  Cola.NombreDeCarpeta("nul") != "nul" && Cola.NombreDeCarpeta("COM9") != "COM9" && Cola.NombreDeCarpeta("lpt5.mix") != "lpt5.mix"
+                  && Cola.NombreDeCarpeta("") != "" && Cola.NombreDeCarpeta("Console") == "Console");
+        var psi = Herramientas.Preparar(["--", "https://www.example.com/watch?v=-x"]);
+        Comprobar("yt-dlp never reads a configuration file", psi.ArgumentList.Count == 6 && psi.ArgumentList[0] == "--ignore-config");
+        Comprobar("yt-dlp loads only Haul's plugins", psi.ArgumentList[1] == "--no-plugin-dirs" && psi.ArgumentList[2] == "--plugin-dirs"
+                  && psi.ArgumentList[3] == Herramientas.RutaComplementos && psi.ArgumentList[4] == "--");
+    }
+
     private static void Red(string carpeta)
     {
         var haul = Task.Run(Versiones.UltimoAsync).GetAwaiter().GetResult();
@@ -324,7 +494,7 @@ public static class PruebaPropia
         {
             var exe = Path.Combine(carpeta, version, MotorYtDlp.Ejecutable);
             Comprobar($"yt-dlp {version} downloaded, checked and in use", nueva && version == yt.Etiqueta && File.Exists(exe)
-                      && File.Exists(Path.Combine(carpeta, version, "verified.txt")) && Herramientas.RutaYtDlp == exe && Herramientas.YtDlpActualizado);
+                      && Herramientas.RutaYtDlp == exe && Herramientas.YtDlpActualizado);
             Comprobar("no unfinished download left", Directory.GetDirectories(carpeta).Length == 1);
             Comprobar("the new copy is chosen at the next start", MotorYtDlp.Elegir(carpeta, Herramientas.VersionYtDlpIncluido)?.ruta == exe);
             var otra = Task.Run(() => MotorYtDlp.ActualizarAsync()).GetAwaiter().GetResult();

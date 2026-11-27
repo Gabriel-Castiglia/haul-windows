@@ -45,8 +45,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The same interface texts helper as the app. -->
-        <Resource Include="..\..\icono\Haul.ico" Link="haul.ico" />
+    <!-- The icon of the window and of its header. -->
+    <Resource Include="..\..\icono\Haul.ico" Link="haul.ico" />
   </ItemGroup>
 
   <ItemGroup>

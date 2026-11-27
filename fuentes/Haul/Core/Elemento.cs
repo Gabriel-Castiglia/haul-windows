@@ -153,7 +153,10 @@ public sealed class Elemento : Observable
                     // percentage marks the start of the second track.
                     if (valor / 100 < Progreso - 0.5) parte++;
                     Progreso = valor / 100;
-                    etapa = valor >= 100 ? Etapa.Procesando : Etapa.Bajando;
+                    // Only a running download moves between these stages: a line still queued after the row
+                    // failed, or was paused or cancelled, must not bring it back.
+                    if (etapa is Etapa.Preparando or Etapa.Bajando or Etapa.Procesando)
+                        etapa = valor >= 100 ? Etapa.Procesando : Etapa.Bajando;
                 }
                 velocidad = Errores.Limpio(c[2]);
                 restante = Errores.Limpio(c[3]);
@@ -168,12 +171,13 @@ public sealed class Elemento : Observable
                 Archivo = c[1].Trim();
                 break;
             default:
-                // With retries left, the error is kept but the row does not turn red: the queue
-                // decides when yt-dlp exits whether to try again.
+                // The error is kept but the row does not turn red yet: yt-dlp may still be running (merging, or
+                // with a later error), and a failed row could be removed or retried meanwhile. The queue decides
+                // when yt-dlp exits whether to try again or to mark it failed (Cola.Terminar).
                 if (linea.StartsWith("ERROR:"))
                 {
-                    if (Reintentos < MaxReintentos) { Fallo = Errores.Mensaje(linea); AvisarTodo(); }
-                    else Fallar(Errores.Mensaje(linea));
+                    Fallo = Errores.Mensaje(linea);
+                    AvisarTodo();
                 }
                 break;
         }
@@ -313,16 +317,15 @@ public sealed class Elemento : Observable
     public bool PuedeAbrir => etapa == Etapa.Lista && Archivo != null;
     public bool ListoSinArchivo => etapa == Etapa.Lista && Archivo == null;
 
-    public string AyudaQuitar => etapa == Etapa.EnCola ? tr("Sacar de la cola", "Remove from queue")
-                                                       : tr("Sacar de la lista", "Remove from list");
-    public string AyudaCancelar => etapa == Etapa.Leyendo ? tr("Dejar de leer la lista", "Stop reading the playlist")
-                                                          : tr("Cancelar esta descarga", "Cancel this download");
-    public string AyudaReintentar => etapa == Etapa.Pausada ? tr("Descargar igual", "Download anyway")
-                                                            : tr("Probar de nuevo", "Try again");
-    public string AyudaPausar => tr("Pausar", "Pause");
-    public string AyudaReanudar => tr("Seguir", "Resume");
-    public string AyudaMostrar => tr("Mostrar en el Explorador", "Show in File Explorer");
-    public string AyudaAbrir => tr("Abrir", "Open");
+    public string AyudaQuitar => T(etapa == Etapa.EnCola ? "RemoveFromQueue" : "RemoveFromList");
+    public string AyudaCancelar => T(etapa == Etapa.Leyendo ? "StopReading" : "CancelDownload");
+    public string AyudaReintentar => T(etapa == Etapa.Pausada ? "DownloadAnyway" : "TryAgain");
+    public string AyudaPausar => T("Pause");
+    public string AyudaReanudar => T("Resume");
+    public string AyudaMostrar => T("ShowInExplorer");
+    public string AyudaAbrir => T("Open");
+    public string AyudaSubir => T("MoveUp");
+    public string AyudaBajar => T("MoveDown");
 
     // Playlist rows show where they belong, e.g. "Mix 2026 · 3/12".
     public string? Ubicacion => NombreLista == null ? null : $"{NombreLista} · {Posicion}";
@@ -333,48 +336,46 @@ public sealed class Elemento : Observable
         get
         {
             // While retrying, the attempt is shown first: "Retry 2/4 · 37 % · …".
-            var intento = Reintentos > 0 ? tr($"Reintento {Reintentos}/{MaxReintentos}", $"Retry {Reintentos}/{MaxReintentos}") + " · " : "";
+            var intento = Reintentos > 0 ? T("RetryOf", Reintentos, MaxReintentos) + " · " : "";
             switch (etapa)
             {
-                case Etapa.EnCola: return tr("En cola", "Queued") + " · " + Formatos.Titulo(Formato);
-                case Etapa.Leyendo: return intento + tr("Leyendo la lista…", "Reading the playlist…");
-                case Etapa.Preparando: return intento + tr("Preparando…", "Preparing…");
-                case Etapa.Esperando:
-                    return tr($"Falló; reintento {Reintentos} de {MaxReintentos} en 2 s…",
-                              $"Failed; retry {Reintentos} of {MaxReintentos} in 2 s…");
-                case Etapa.Pausada: return tr("En pausa: es un instrumental", "Paused: it is an instrumental");
-                case Etapa.Detenida: return tr("En pausa", "Paused") + (Progreso > 0 ? $" · {(int)(Progreso * 100)} %" : "");
-                case Etapa.Procesando:
-                    return intento + (Formato == Formato.Audio ? tr("Convirtiendo a MP3…", "Converting to MP3…")
-                                                               : tr("Uniendo imagen y sonido…", "Merging picture and sound…"));
+                case Etapa.EnCola: return T("Queued") + " · " + Formatos.Titulo(Formato);
+                case Etapa.Leyendo: return intento + T("ReadingPlaylist");
+                case Etapa.Preparando: return intento + T("Preparing");
+                case Etapa.Esperando: return T("WaitingRetry", Reintentos, MaxReintentos);
+                case Etapa.Pausada: return T("HeldInstrumental");
+                case Etapa.Detenida: return T("Paused") + (Progreso > 0 ? $" · {(int)(Progreso * 100)} %" : "");
+                case Etapa.Procesando: return intento + T(Formato == Formato.Audio ? "ConvertingMp3" : "Merging");
                 case Etapa.Bajando:
                     var partes = new List<string> { $"{(int)(Progreso * 100)} %" };
                     if (velocidad != "") partes.Add(velocidad);
-                    if (restante != "") partes.Add(tr($"quedan {restante}", $"{restante} left"));
-                    if (Formato == Formato.Video && parte > 1) partes.Add(tr("sonido", "sound"));
+                    if (restante != "") partes.Add(T("TimeLeft", restante));
+                    if (Formato == Formato.Video && parte > 1) partes.Add(T("Sound"));
                     return intento + string.Join(" · ", partes);
                 case Etapa.Lista:
                     var datos = new[] { autor, duracion }.Where(x => !string.IsNullOrEmpty(x));
-                    return datos.Any() ? string.Join(" · ", datos) : tr("Listo", "Done");
-                case Etapa.Cancelada: return tr("Cancelada", "Cancelled");
+                    return datos.Any() ? string.Join(" · ", datos) : T("Done");
+                case Etapa.Cancelada: return T("Cancelled");
                 default:
-                    return Errores.Traducir(Fallo)
-                           + (Reintentos > 0 ? tr($" · {Reintentos} reintentos", $" · {Reintentos} retries") : "");
+                    return Errores.Traducir(Fallo) + (Reintentos > 0 ? " · " + T("Retries", Reintentos) : "");
             }
         }
     }
 
     // YouTube offers WebP thumbnails; the JPEG of the same picture is requested instead, which
-    // Windows decodes everywhere.
+    // Windows decodes everywhere. Only web addresses are fetched: a thumbnail given by a site (or kept in the
+    // saved queue) as a local or network path (file://, \\server\share) is ignored.
     private ImageSource? Cargar(string url)
     {
         try
         {
             if (url.Contains("ytimg.com") && url.Contains("vi_webp"))
                 url = url.Replace("/vi_webp/", "/vi/").Replace(".webp", ".jpg");
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                return null;
             var b = new BitmapImage();
             b.BeginInit();
-            b.UriSource = new Uri(url);
+            b.UriSource = uri;
             b.DecodePixelWidth = 224;
             b.CacheOption = BitmapCacheOption.OnLoad;
             // If the picture cannot be fetched, the row goes back to the placeholder.

@@ -15,7 +15,7 @@
 # the signature with the key already stored in vendor\yt-dlp\public.key (using the gpg that
 # ships with Git for Windows) and the SHA-256 hashes; only then replaces the files and refreshes
 # the license texts, including the third-party licenses stored inside yt-dlp.exe (needs Python).
-# Afterwards: update the version in both READMEs and vendor\yt-dlp\README*.md, test, and run
+# Afterwards: update the version in the READMEs (every language) and vendor\yt-dlp\README*.md, test, and run
 # scripts\build.ps1 and run dist\haul-setup.exe again.
 
 param([Parameter(Mandatory = $true)][string]$Version)
@@ -34,7 +34,7 @@ if (-not $python) { throw 'Python is missing; it is needed to read the licenses 
 $temporal = Join-Path $env:TEMP ("haul-yt-dlp-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $temporal | Out-Null
 try {
-    Set-Location $temporal
+    Push-Location $temporal
     $ProgressPreference = 'SilentlyContinue'
     foreach ($archivo in 'yt-dlp.exe', 'yt-dlp.tar.gz', 'SHA2-256SUMS', 'SHA2-256SUMS.sig') {
         Invoke-WebRequest -Uri "$Url/$archivo" -OutFile $archivo -UseBasicParsing
@@ -49,6 +49,7 @@ try {
 
     foreach ($archivo in 'yt-dlp.exe', 'yt-dlp.tar.gz') {
         $linea = Select-String -Path SHA2-256SUMS -Pattern (' ' + [regex]::Escape($archivo) + '$') | Select-Object -First 1
+        if (-not $linea) { throw "SHA2-256SUMS has no entry for $archivo." }
         $esperado = $linea.Line.Split(' ')[0].ToLowerInvariant()
         $real = (Get-FileHash $archivo -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($real -ne $esperado) { throw "$archivo does not match SHA2-256SUMS." }
@@ -57,6 +58,7 @@ try {
 
     # License files: from the source tarball, and from inside the executable.
     tar -xzf yt-dlp.tar.gz yt-dlp/LICENSE yt-dlp/AUTHORS
+    if ($LASTEXITCODE -ne 0) { throw 'Could not extract LICENSE and AUTHORS from yt-dlp.tar.gz.' }
     & $python -I -B (Join-Path $PSScriptRoot 'extraer_licencias.py') yt-dlp.exe THIRD_PARTY_LICENSES.txt
     if ($LASTEXITCODE -ne 0) { throw 'Could not read the licenses inside yt-dlp.exe.' }
 
@@ -68,7 +70,7 @@ try {
     Copy-Item 'THIRD_PARTY_LICENSES.txt' (Join-Path $Destino 'licenses\yt-dlp-exe-THIRD_PARTY_LICENSES.txt') -Force
     [IO.File]::WriteAllText((Join-Path $Destino 'VERSION'), "$Version`n")
 } finally {
-    Set-Location $Raiz
+    Pop-Location   # back to where the script was started, not the repository root
     Remove-Item $temporal -Recurse -Force -ErrorAction SilentlyContinue
 }
 

@@ -101,6 +101,12 @@ public static class Herramientas
     }
 
     // Prepares a yt-dlp process with hidden console, UTF-8 output and the rebuilt PATH.
+    // --ignore-config comes first: yt-dlp otherwise reads a "yt-dlp.conf" from its working directory, which for a
+    // download is the destination folder (usually Downloads, where any web page can drop such a file), and options
+    // like --exec in it would run commands. It also keeps the user's own yt-dlp configuration from changing the
+    // output format the queue parses.
+    // --no-plugin-dirs then clears the plugin folders yt-dlp searches by default (%APPDATA%\yt-dlp\plugins and the
+    // like, where any program run by the user can leave Python code), and --plugin-dirs adds back only Haul's own.
     public static ProcessStartInfo Preparar(IEnumerable<string> argumentos, string? carpeta = null)
     {
         var psi = new ProcessStartInfo(RutaYtDlp)
@@ -117,6 +123,10 @@ public static class Herramientas
         psi.Environment["PYTHONUTF8"] = "1";
         psi.Environment["PYTHONIOENCODING"] = "utf-8";
         psi.Environment["PYTHONDONTWRITEBYTECODE"] = "1";
+        psi.ArgumentList.Add("--ignore-config");
+        psi.ArgumentList.Add("--no-plugin-dirs");
+        psi.ArgumentList.Add("--plugin-dirs");
+        psi.ArgumentList.Add(RutaComplementos);
         foreach (var a in argumentos) psi.ArgumentList.Add(a);
         return psi;
     }

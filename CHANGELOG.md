@@ -2,6 +2,71 @@
 
 All notable changes to Haul for Windows. Versions follow [semantic versioning](https://semver.org): major.minor.patch.
 
+English · [Español](CHANGELOG.es.md) · [日本語](CHANGELOG.ja.md)
+
+## 1.8.0 - 2026-11-27
+### Added
+
+- Japanese interface: Haul and its setup window speak Japanese too (日本語 in their language menus), with the
+  Japanese interface fonts of Windows (Yu Gothic UI, Meiryo UI). The setup window starts in Japanese on a Windows
+  in Japanese, and Haul started without a setup follows Windows when it is in Spanish or Japanese.
+
+### Changed
+
+- The Spanish texts of Haul, of its setup window and of the documentation address the user as "tú" and use neutral
+  Spanish: for example "Pega uno o varios enlaces", "Reanudar todo" (was "Seguir todo"), "Descargar listas enteras"
+  (was "Bajar listas enteras") and "Quitar de la cola" (was "Sacar de la cola").
+- "Check for updates" pressed while an update is already under way says so ("An update of Haul is already under
+  way"); before, it did nothing.
+- Copies of yt-dlp downloaded by Haul no longer get a `verified.txt` mark, which was never read: a copy is checked
+  in a folder of its own, which takes the version's name only after every check has passed.
+
+### Security
+
+- yt-dlp always runs with `--ignore-config`. Before, it read a `yt-dlp.conf` from the download folder (usually
+  Downloads, where any web page can leave a file), and options in it such as `--exec` would run commands. As a
+  consequence, the user's own yt-dlp configuration files (`%APPDATA%\yt-dlp\config` and the like) are no longer
+  applied either.
+- Thumbnails are fetched only from `http` and `https` addresses; local and network paths are ignored.
+- yt-dlp loads only Haul's own plugins (`--no-plugin-dirs`, then `--plugin-dirs` with Haul's `plugins` folder).
+  Before, it also loaded any plugin in `%APPDATA%\yt-dlp\plugins` and its other default folders, where any program
+  run by the user can leave Python code.
+- The setup program downloaded by an update is checked again right before it runs and kept open until Haul has
+  closed, so no other program can change, replace or delete it between that check and its start.
+
+### Fixed
+
+- The window could freeze when a download ended while a process started by yt-dlp still held its output open. The
+  end of every yt-dlp is now awaited off the window's thread, and a process left behind is stopped after ten
+  seconds, with everything yt-dlp started.
+- A row whose last attempt failed turned red, and could be removed or retried, while yt-dlp was still running. It
+  now turns red when yt-dlp exits.
+- "Cancel all" with "Clear finished automatically" on removes the cancelled rows, as a single cancel already did.
+- Playlist folders named like a Windows device with an extension, or `COM5`–`COM9` and `LPT4`–`LPT9` (`NUL.x`,
+  `COM7`), get the "Playlist " prefix, as `CON` and `NUL` already did.
+- Setup: the window can no longer be closed while it installs or upgrades FFmpeg and Deno. Before, closing it asked
+  to cancel and then said "Canceled. The computer was left as it was", although Haul was already installed.
+
+### Accessibility
+
+- The colour tiles of the appearance window can be reached with Tab and chosen with Enter or Space, and screen
+  readers read their names.
+- Rows of the queue can be reordered from the keyboard: Tab reaches each row, and Alt+Up and Alt+Down move it one
+  place; the row's menu (right-click, Shift+F10 or the menu key) has "Move up" and "Move down". Screen readers read
+  each row's title and status.
+- The red of a failed row is darker on a light window (contrast 5.2:1 or more) and brighter on a dark one, so it
+  reads at 4.5:1 or more in both.
+
+### Documentation
+
+- The README, the PDF manual and this changelog are also in Japanese (`README.ja.md`, `docs/Haul-manual-ja.pdf`,
+  `CHANGELOG.ja.md`), and the changelog in Spanish (`CHANGELOG.es.md`). The installer puts `README.ja.txt` next to
+  `README.txt` and `README.es.txt`.
+- New sections in the README and the manuals: the main window part by part, the options, troubleshooting with
+  every message, and responsible use; pictures of the About window and of the uninstall page, and every picture
+  drawn again with the current icon and version.
+- The Japanese README and manual show Haul and its setup window in Japanese and quote their Japanese texts.
+
 ## 1.7.4 - 2026-11-27
 
 ### Changed

@@ -38,7 +38,7 @@
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPCOMMENTS" Value="A front end for yt-dlp. License: GPL-2.0-only." />
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/Gabriel-Castiglia/haul-windows" />
-    <!-- Interface language chosen in the setup window ("en" or "es"); the app uses it on its first start. -->
+    <!-- Interface language chosen in the setup window ("en", "es" or "ja"); the app uses it on its first start. -->
     <Property Id="HAULLANGUAGE" Value="en" />
 
     <!-- Close the running app before its files are replaced or removed. -->
@@ -67,6 +67,9 @@
         <Component Id="ReadmeEs">
           <File Id="ReadmeEs" Source="..\..\README.es.txt" KeyPath="yes" />
         </Component>
+        <Component Id="ReadmeJa">
+          <File Id="ReadmeJa" Source="..\..\README.ja.txt" KeyPath="yes" />
+        </Component>
       </Directory>
     </StandardDirectory>
 
@@ -77,6 +80,7 @@
       <ComponentRef Id="License" />
       <ComponentRef Id="Readme" />
       <ComponentRef Id="ReadmeEs" />
+      <ComponentRef Id="ReadmeJa" />
       <ComponentRef Id="YtDlp" />
       <!-- yt-dlp's licenses and Haul's yt-dlp plugin, as published next to Haul.exe. -->
       <Files Directory="INSTALLFOLDER" Subdirectory="licenses" Include="$(var.PublishDir)licenses\**" />

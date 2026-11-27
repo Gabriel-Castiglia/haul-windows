@@ -28,7 +28,8 @@ public sealed class TemaVentana : Window
 
     public TemaVentana()
     {
-        Title = tr("Apariencia", "Appearance");
+        Title = T("Appearance");
+        Loc.Aplicar(this);
         Width = 620;
         SizeToContent = SizeToContent.Height;
         ResizeMode = ResizeMode.NoResize;
@@ -37,13 +38,13 @@ public sealed class TemaVentana : Window
         SetResourceReference(IconProperty, "IconoVentana");
 
         var panel = new StackPanel { Margin = new Thickness(26, 22, 26, 22) };
-        panel.Children.Add(new TextBlock { Text = tr("Apariencia", "Appearance"), FontSize = 20, FontWeight = FontWeights.SemiBold,
+        panel.Children.Add(new TextBlock { Text = T("Appearance"), FontSize = 20, FontWeight = FontWeights.SemiBold,
                                            Margin = new Thickness(0, 0, 0, 14) });
 
         var modos = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 18) };
         foreach (var (clave, texto) in new[]
         {
-            (Tema.Auto, tr("Como Windows", "As Windows")), (Tema.Claro, tr("Claro", "Light")), (Tema.Oscuro, tr("Oscuro", "Dark")),
+            (Tema.Auto, T("AsWindows")), (Tema.Claro, T("Light")), (Tema.Oscuro, T("Dark")),
         })
         {
             var b = new RadioButton { Content = texto, GroupName = "apariencia", IsChecked = Ajustes.Datos.Apariencia == clave,
@@ -59,7 +60,7 @@ public sealed class TemaVentana : Window
         }
         panel.Children.Add(modos);
 
-        panel.Children.Add(Secundario(tr("Color", "Colour"), new Thickness(0, 0, 0, 6)));
+        panel.Children.Add(Secundario(T("Colour"), new Thickness(0, 0, 0, 6)));
         var rejilla = new UniformGrid { Columns = 6, Margin = new Thickness(-4, 0, -4, 8) };
         foreach (var c in Tema.Colores)
         {
@@ -74,22 +75,29 @@ public sealed class TemaVentana : Window
                 Child = new StackPanel { Children = { imagen, nombre } },
             };
             var clave = c.Clave;
-            azulejo.MouseLeftButtonUp += (_, _) =>
+            void Elegir()
             {
                 Ajustes.Datos.Color = clave;
                 Ajustes.Guardar();
                 Tema.Aplicar();
                 Marcar();
+            }
+            azulejo.MouseLeftButtonUp += (_, _) => Elegir();
+            // Reachable with the keyboard (Tab, then Enter or Space) and named for screen readers.
+            azulejo.Focusable = true;
+            KeyboardNavigation.SetIsTabStop(azulejo, true);
+            System.Windows.Automation.AutomationProperties.SetName(azulejo, c.Nombre);
+            azulejo.KeyDown += (_, e) =>
+            {
+                if (e.Key is Key.Enter or Key.Space) { Elegir(); e.Handled = true; }
             };
             azulejos.Add((clave, azulejo));
             rejilla.Children.Add(azulejo);
         }
         panel.Children.Add(rejilla);
-        panel.Children.Add(Secundario(tr("El color se usa en el ícono de la ventana y de la barra de tareas, en los botones y en lo seleccionado.",
-                                         "The colour is used for the icon of the window and of the taskbar button, the buttons and selected items."),
-                                      new Thickness(0, 0, 0, 0)));
+        panel.Children.Add(Secundario(T("ColourUse"), new Thickness(0, 0, 0, 0)));
 
-        var cerrar = new Button { Content = tr("Listo", "Done"), Padding = new Thickness(18, 6, 18, 6), IsDefault = true, IsCancel = true,
+        var cerrar = new Button { Content = T("Done"), Padding = new Thickness(18, 6, 18, 6), IsDefault = true, IsCancel = true,
                                   HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
         if (Application.Current.TryFindResource("AccentButtonStyle") is Style s) cerrar.Style = s;
         cerrar.Click += (_, _) => Close();

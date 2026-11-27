@@ -24,6 +24,8 @@
             <SolidColorBrush x:Key="AcentoBrush" Color="#D9652F" />
             <SolidColorBrush x:Key="AcentoSuaveBrush" Color="#40D9652F" />
             <SolidColorBrush x:Key="TextoSobreAcentoBrush" Color="White" />
+            <!-- Red of a failed row (Tema.cs: a deeper one on a light window, for contrast). -->
+            <SolidColorBrush x:Key="ErrorBrush" Color="#FF6B6E" />
             <LinearGradientBrush x:Key="DegradeBrush" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Offset="0" Color="#D9652F" />
                 <GradientStop Offset="1" Color="#8D411E" />

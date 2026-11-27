@@ -21,9 +21,10 @@ namespace Haul.Core;
 // An accent colour: the tile of the icon (icono/accents/haul_<key>.ico, drawn from assets/icon.svg by the author's icon
 // tool with the same keys, the deeper tone as the tile) and the highlight colour of the window. The deeper tone is used on a
 // light window and under white text; the brighter one for highlights on a dark window.
-public sealed record ColorTema(string Clave, string Es, string En, Color Hondo, Color Vivo)
+public sealed record ColorTema(string Clave, Color Hondo, Color Vivo)
 {
-    public string Nombre => Loc.tr(Es, En);
+    // Its name in the interface language (Textos.cs, "Colour.<key>").
+    public string Nombre => Loc.T("Colour." + Clave);
 }
 
 // Light, dark or as Windows (the Fluent theme of WPF), and the accent colour, which also colours the icon of the
@@ -34,18 +35,18 @@ public static class Tema
 
     public static readonly ColorTema[] Colores =
     {
-        new("ember", "Naranja", "Orange", Rgb(0xD9652F), Rgb(0xF08A5D)),       // the default
-        new("gold", "Dorado", "Gold", Rgb(0x9A6F00), Rgb(0xE2B84C)),
-        new("purple", "Morado", "Purple", Rgb(0x5B2A86), Rgb(0xB392E0)),
-        new("sky", "Celeste", "Sky blue", Rgb(0x1A8CD8), Rgb(0x5CB8F0)),
-        new("red", "Rojo", "Red", Rgb(0xC8102E), Rgb(0xF2545B)),
-        new("yellow", "Amarillo", "Yellow", Rgb(0xB88A00), Rgb(0xF5C842)),
-        new("green", "Verde", "Green", Rgb(0x1E8A43), Rgb(0x4CC27A)),
-        new("teal", "Verde azulado", "Teal", Rgb(0x00796B), Rgb(0x4DB6AC)),
-        new("blue", "Azul", "Blue", Rgb(0x1F5FD1), Rgb(0x6E9BFF)),
-        new("pink", "Rosa", "Pink", Rgb(0xC2185B), Rgb(0xF06292)),
-        new("black", "Negro", "Black", Rgb(0x1D1D1F), Rgb(0xC7C7CC)),
-        new("white", "Blanco", "White", Rgb(0x8E8E93), Rgb(0xF5F5F7)),
+        new("ember", Rgb(0xD9652F), Rgb(0xF08A5D)),       // the default
+        new("gold", Rgb(0x9A6F00), Rgb(0xE2B84C)),
+        new("purple", Rgb(0x5B2A86), Rgb(0xB392E0)),
+        new("sky", Rgb(0x1A8CD8), Rgb(0x5CB8F0)),
+        new("red", Rgb(0xC8102E), Rgb(0xF2545B)),
+        new("yellow", Rgb(0xB88A00), Rgb(0xF5C842)),
+        new("green", Rgb(0x1E8A43), Rgb(0x4CC27A)),
+        new("teal", Rgb(0x00796B), Rgb(0x4DB6AC)),
+        new("blue", Rgb(0x1F5FD1), Rgb(0x6E9BFF)),
+        new("pink", Rgb(0xC2185B), Rgb(0xF06292)),
+        new("black", Rgb(0x1D1D1F), Rgb(0xC7C7CC)),
+        new("white", Rgb(0x8E8E93), Rgb(0xF5F5F7)),
     };
 
     public static ColorTema Obtener(string? clave) => Colores.FirstOrDefault(c => c.Clave == clave) ?? Colores[0];
@@ -72,6 +73,8 @@ public static class Tema
         r["AcentoSuaveBrush"] = Congelado(new SolidColorBrush(Color.FromArgb(0x40, vivo.R, vivo.G, vivo.B)));
         r["DegradeBrush"] = Congelado(new LinearGradientBrush(hondo, Mezclar(hondo, Colors.Black, 0.35), new Point(0, 0), new Point(1, 1)));
         r["TextoSobreAcentoBrush"] = Congelado(new SolidColorBrush(SobreColor(hondo)));
+        // The red of a failed row: at least 4.5:1 against the cards and the window, in both appearances.
+        r["ErrorBrush"] = Congelado(new SolidColorBrush(Rgb(EsOscuro ? ErrorOscuro : ErrorClaro)));
 
         // The Fluent controls (check boxes, progress bars, the accent button) take the chosen colour instead of the
         // accent of Windows.
@@ -152,6 +155,22 @@ public static class Tema
         {
             return null;
         }
+    }
+
+    // The red of a failed row on a light and on a dark window; the self-test checks their contrast.
+    public const uint ErrorClaro = 0xC4262E, ErrorOscuro = 0xFF6B6E;
+
+    // Contrast ratio between two colours (0xRRGGBB), as WCAG defines it: 1 to 21.
+    public static double Contraste(uint a, uint b)
+    {
+        static double Canal(uint v)
+        {
+            double c = v / 255.0;
+            return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+        static double Luminancia(uint c) => 0.2126 * Canal((c >> 16) & 0xFF) + 0.7152 * Canal((c >> 8) & 0xFF) + 0.0722 * Canal(c & 0xFF);
+        double la = Luminancia(a), lb = Luminancia(b);
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
     }
 
     // Text on a fill of colour c: nearly black on pale tones, white otherwise.

@@ -12,7 +12,8 @@
   It is distributed WITHOUT ANY WARRANTY. See the LICENSE file for details.
 -->
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="1.1.0.0" name="Haul.app"/>
+  <!-- No assemblyIdentity: it is optional for an application, and its version was never Haul's. The version of
+       Haul.exe comes from <Version> in Haul.csproj alone. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">

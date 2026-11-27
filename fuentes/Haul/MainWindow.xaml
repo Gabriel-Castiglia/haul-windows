@@ -60,6 +60,7 @@
                 <ComboBox x:Name="SelectorIdioma" MinWidth="118" SelectionChanged="Idioma_Changed">
                     <ComboBoxItem Content="English" />
                     <ComboBoxItem Content="Español" />
+                    <ComboBoxItem Content="日本語" Language="ja-JP" FontFamily="Yu Gothic UI, Meiryo UI, Segoe UI" />
                 </ComboBox>
                 <Button x:Name="BotonTema" Margin="8,0,0,0" Padding="9,6" Click="Tema_Click">
                     <TextBlock Style="{StaticResource Glifo}" FontSize="14" Text="&#xE790;" />
@@ -248,13 +249,24 @@
                                 Click="ReintentarTodas_Click"
                                 Visibility="{Binding HayFallos, Converter={StaticResource BoolAVisible}}" />
                     </DockPanel>
-                    <!-- Rows can be dragged to another place; downloads start in list order -->
-                    <ItemsControl ItemsSource="{Binding Elementos}">
+                    <!-- Rows can be dragged to another place, or moved with Alt+Up and Alt+Down (on the row or on one of
+                         its buttons) and with the row's menu; downloads start in list order -->
+                    <ItemsControl x:Name="ListaCola" ItemsSource="{Binding Elementos}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type core:Elemento}">
                                 <Border Style="{StaticResource Tarjeta}" Padding="10" Margin="0,0,0,8" AllowDrop="True"
+                                        Focusable="True" KeyboardNavigation.IsTabStop="True"
+                                        AutomationProperties.Name="{Binding Titulo}"
+                                        AutomationProperties.HelpText="{Binding TextoDeEstado}"
                                         PreviewMouseLeftButtonDown="Fila_MouseDown" PreviewMouseMove="Fila_MouseMove"
+                                        PreviewKeyDown="Fila_KeyDown" ContextMenuOpening="Fila_MenuAbriendo"
                                         DragOver="Fila_DragOver" Drop="Fila_Drop">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{Binding AyudaSubir}" InputGestureText="Alt+↑" Click="SubirFila_Click" />
+                                            <MenuItem Header="{Binding AyudaBajar}" InputGestureText="Alt+↓" Click="BajarFila_Click" />
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
@@ -296,7 +308,7 @@
                                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding EsError}" Value="True">
-                                                                <Setter Property="Foreground" Value="#E5484D" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>

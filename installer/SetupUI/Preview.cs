@@ -22,8 +22,8 @@ namespace Haul.Setup;
 
 /// <summary>
 /// Test option: renders one page of the setup window to a PNG without the setup engine, for the manuals
-/// and for checking that every text fits in both languages. Pages: install, upgrade, maintenance, uninstall,
-/// newer, progress, installed, uninstalled, failed.
+/// and for checking that every text fits in the three languages. Pages: install, upgrade, maintenance, uninstall,
+/// newer, progress, installed, failed (without an engine the result page always reads as an installation).
 /// </summary>
 internal static class Preview
 {

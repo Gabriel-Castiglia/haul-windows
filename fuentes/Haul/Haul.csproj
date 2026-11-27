@@ -28,8 +28,8 @@
     <AssemblyName>Haul</AssemblyName>
     <ApplicationIcon>..\..\icono\Haul.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.7.4</Version>
-    <!-- Plain "1.1.0" in Settings > Apps, without the git commit the SDK appends by default. -->
+    <Version>1.8.0</Version>
+    <!-- The product version of Haul.exe is the plain <Version> above, without the git commit the SDK appends by default. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Haul</Product>
     <Company>Gabriel Castiglia</Company>
@@ -58,6 +58,8 @@
 
   <ItemGroup>
     <AssemblyMetadata Include="YtDlpVersion" Value="$(YtDlpVersion)" />
+    <!-- The texts of the setup window, compiled here too so that the self-test checks its three tables. -->
+    <Compile Include="..\..\installer\SetupUI\SetupTexts.cs" Link="Core\SetupTexts.cs" />
     <Resource Include="..\..\icono\accents\*.ico" Link="Recursos\accents\%(Filename)%(Extension)" />
     <None Include="..\..\vendor\yt-dlp\yt-dlp.exe" Link="yt-dlp.exe"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />

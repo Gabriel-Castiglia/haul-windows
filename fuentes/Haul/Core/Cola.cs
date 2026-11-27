@@ -38,9 +38,9 @@ public sealed partial class Cola : Observable
     private readonly Queue<string> pendientes = new();
 
     private readonly Dispatcher ui = Dispatcher.CurrentDispatcher;
-    private Process? proceso;
+    private ProcesoVigilado? proceso;
     private Elemento? actual;
-    private readonly Dictionary<Elemento, Process> lecturas = [];
+    private readonly Dictionary<Elemento, ProcesoVigilado> lecturas = [];
     private readonly HashSet<Elemento> canceladas = [];
     // Rows whose process was stopped by a pause, with the stage they go back to.
     private readonly Dictionary<Elemento, Etapa> pausando = [];
@@ -157,7 +157,7 @@ public sealed partial class Cola : Observable
 
     public string NombreDestino =>
         string.Equals(destino.TrimEnd('\\'), CarpetaDescargas().TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)
-            ? tr("Descargas", "Downloads") : Path.GetFileName(destino.TrimEnd('\\')) is { Length: > 0 } n ? n : destino;
+            ? T("Downloads") : Path.GetFileName(destino.TrimEnd('\\')) is { Length: > 0 } n ? n : destino;
 
     public List<string> Detectados => Enlaces.En(texto);
     public bool Ocupada => actual != null || lecturas.Count > 0;
@@ -179,9 +179,9 @@ public sealed partial class Cola : Observable
             var pausadas = Elementos.Count(e => e.Etapa is Etapa.Pausada or Etapa.Detenida);
             // A playlist still being read is not counted yet; one that failed is.
             var total = Elementos.Count(e => !(e.EsLectura && e.Activa)) + limpias;
-            var t = tr($"{hechas} de {total} listas", $"{hechas} of {total} done");
-            if (fallos > 0) t += " · " + tr($"{fallos} con error", $"{fallos} failed");
-            if (pausadas > 0) t += " · " + tr($"{pausadas} en pausa", $"{pausadas} paused");
+            var t = T("SummaryDone", hechas, total);
+            if (fallos > 0) t += " · " + T("SummaryFailed", fallos);
+            if (pausadas > 0) t += " · " + T("SummaryPaused", pausadas);
             return t;
         }
     }
@@ -193,10 +193,9 @@ public sealed partial class Cola : Observable
             var n = Detectados.Count;
             return n switch
             {
-                0 => texto.Length == 0 ? tr("Ctrl+Enter para descargar", "Ctrl+Enter to download")
-                                       : tr("No veo ningún enlace", "No links found"),
-                1 => tr("1 enlace · Ctrl+Enter para descargar", "1 link · Ctrl+Enter to download"),
-                _ => tr($"{n} enlaces · Ctrl+Enter para descargar", $"{n} links · Ctrl+Enter to download"),
+                0 => T(texto.Length == 0 ? "CtrlEnter" : "NoLinks"),
+                1 => T("OneLink"),
+                _ => T("Links", n),
             };
         }
     }
@@ -207,8 +206,8 @@ public sealed partial class Cola : Observable
         {
             var n = Detectados.Count;
             if (Ocupada && n > 0)
-                return n == 1 ? tr("Agregar a la cola", "Add to queue") : tr($"Agregar {n} a la cola", $"Add {n} to queue");
-            return n > 1 ? tr($"Descargar {n} enlaces", $"Download {n} links") : tr("Descargar", "Download");
+                return n == 1 ? T("AddToQueue") : T("AddNToQueue", n);
+            return n > 1 ? T("DownloadNLinks", n) : T("Download");
         }
     }
 
@@ -314,8 +313,8 @@ public sealed partial class Cola : Observable
         cerrada = true;
         foreach (var t in esperas.Values) t.Stop();
         esperas.Clear();
-        foreach (var p in lecturas.Values.ToList()) Matar(p);
-        if (proceso != null) Matar(proceso);
+        foreach (var p in lecturas.Values.ToList()) p.Detener();
+        proceso?.Detener();
     }
 
     // Rows with example data for the pictures of the README (--captura); nothing runs.
@@ -323,12 +322,13 @@ public sealed partial class Cola : Observable
     {
         var d = destino;
         var a = new Elemento("https://www.example.com/watch/1", Formato.Video, d);
-        a.FijarInfo(tr("Un paseo por el puerto al atardecer", "A walk along the harbour at sunset"), tr("Canal de ejemplo", "Example channel"), "12:48", null);
+        a.FijarInfo(T("ExampleTitle1"), T("ExampleAuthor1"), "12:48", null);
+        a.Etapa = Etapa.Preparando;   // progress lines only move a row that is running
         a.Procesar("AVANCE\t42.0%\t3.10MiB/s\t00:25");
         var b = new Elemento("https://www.example.com/watch/2", Formato.Audio, d);
-        b.FijarInfo(tr("Concierto de ejemplo, en vivo", "Example concert, live"), tr("Sello de ejemplo", "Example label"), "48:02", null);
+        b.FijarInfo(T("ExampleTitle2"), T("ExampleAuthor2"), "48:02", null);
         var c = new Elemento("https://www.example.com/watch/3", Formato.Video, d);
-        c.FijarInfo(tr("Cómo plantar un limonero", "How to plant a lemon tree"), tr("Huerta de ejemplo", "Example garden"), "7:15", null);
+        c.FijarInfo(T("ExampleTitle3"), T("ExampleAuthor3"), "7:15", null);
         c.Terminar();
         foreach (var e in new[] { a, b, c }) Sumar(e);
     }
@@ -410,27 +410,18 @@ public sealed partial class Cola : Observable
     public bool HayPregunta => preguntaLista != null || esperaGrande != null;
     public bool CampoHabilitado => !HayPregunta;
     public string IconoPregunta => preguntaLista != null ? "\uE8FD" : "\uE8F1";
-    public string TituloPregunta => preguntaLista != null
-        ? tr("Este video está dentro de una lista", "This video is part of a playlist")
-        : tr("Una lista grande", "A large playlist");
+    public string TituloPregunta => T(preguntaLista != null ? "InPlaylistTitle" : "LargePlaylistTitle");
     public string TextoPregunta => preguntaLista != null
-        ? tr("Podés bajar solo este video o la lista entera. Con la lista entera, cada video entra a la cola por "
-             + "separado y se guarda en una carpeta con el nombre de la lista, numerado en orden.",
-             "You can download just this video or the whole playlist. With the whole playlist, each video joins "
-             + "the queue on its own and is saved in a folder named after the playlist, in order.")
-        : esperaGrande is { } e
-            ? tr($"«{NombreVisible(e.nombre)}» tiene {e.videos.Count} videos. ¿Los agrego todos a la cola?",
-                 $"\"{NombreVisible(e.nombre)}\" has {e.videos.Count} videos. Add them all to the queue?")
-            : "";
+        ? T("InPlaylistText")
+        : esperaGrande is { } e ? T("LargePlaylistText", NombreVisible(e.nombre), e.videos.Count) : "";
     public string? DetallePregunta => preguntaLista;
     public bool HayDetallePregunta => preguntaLista != null;
-    public string TextoPrincipal => preguntaLista != null ? tr("La lista entera", "The whole playlist")
-        : tr($"Agregar {esperaGrande?.videos.Count}", $"Add {esperaGrande?.videos.Count}");
-    public string TextoSecundario => tr("Solo este video", "Only this video");
+    public string TextoPrincipal => preguntaLista != null ? T("WholePlaylist") : T("AddN", esperaGrande?.videos.Count);
+    public string TextoSecundario => T("OnlyThisVideo");
     public bool HaySecundario => preguntaLista != null;
-    public string TextoCancelar => tr("Cancelar", "Cancel");
+    public string TextoCancelar => T("Cancel");
 
-    private static string NombreVisible(string n) => string.IsNullOrWhiteSpace(n) ? tr("Lista", "Playlist") : n;
+    private static string NombreVisible(string n) => string.IsNullOrWhiteSpace(n) ? T("Playlist") : n;
 
     private void AvisarPregunta()
     {
@@ -461,8 +452,8 @@ public sealed partial class Cola : Observable
     public void Cancelar(Elemento e)
     {
         if (esperas.Remove(e, out var t)) { t.Stop(); Detener(e); }
-        else if (lecturas.TryGetValue(e, out var p)) { canceladas.Add(e); Matar(p); }
-        else if (e == actual && proceso != null) { canceladas.Add(e); Matar(proceso); }
+        else if (lecturas.TryGetValue(e, out var p)) { canceladas.Add(e); p.Detener(); }
+        else if (e == actual && proceso != null) { canceladas.Add(e); proceso.Detener(); }
         else if (e.Etapa is Etapa.Detenida or Etapa.EnCola) { e.BorrarRestos(); e.Etapa = Etapa.Cancelada; Despedir(e); }
     }
 
@@ -470,11 +461,15 @@ public sealed partial class Cola : Observable
     {
         EnPausa = false;
         foreach (var e in Elementos.Where(x => x.Etapa is Etapa.Detenida or Etapa.EnCola)) e.BorrarRestos();
+        // Despedir: with automatic clearing on, they leave the list, as with a single Cancel.
         foreach (var e in Elementos.Where(x => x.Etapa is Etapa.EnCola or Etapa.Pausada or Etapa.Detenida).ToList())
+        {
             e.Etapa = Etapa.Cancelada;
+            Despedir(e);
+        }
         foreach (var (e, t) in esperas.ToList()) { t.Stop(); esperas.Remove(e); Detener(e); }
-        foreach (var (e, p) in lecturas.ToList()) { canceladas.Add(e); Matar(p); }
-        if (actual != null && proceso != null) { canceladas.Add(actual); Matar(proceso); }
+        foreach (var (e, p) in lecturas.ToList()) { canceladas.Add(e); p.Detener(); }
+        if (actual != null && proceso != null) { canceladas.Add(actual); proceso.Detener(); }
     }
 
     // Pressed by the user: on a paused instrumental it means "download it anyway".
@@ -502,7 +497,7 @@ public sealed partial class Cola : Observable
             e.Pausar(Etapa.Detenida);
             Siguiente();
         }
-        else if (e == actual && proceso != null) { pausando[e] = Etapa.Detenida; Matar(proceso); }
+        else if (e == actual && proceso != null) { pausando[e] = Etapa.Detenida; proceso.Detener(); }
         else if (e.Etapa == Etapa.EnCola) e.Etapa = Etapa.Detenida;
         Refrescar();
     }
@@ -520,7 +515,7 @@ public sealed partial class Cola : Observable
         EnPausa = true;
         if (actual is not { } e) return;
         if (esperas.Remove(e, out var t)) { t.Stop(); actual = null; e.Pausar(Etapa.EnCola); Refrescar(); }
-        else if (proceso != null) { pausando[e] = Etapa.EnCola; Matar(proceso); }
+        else if (proceso != null) { pausando[e] = Etapa.EnCola; proceso.Detener(); }
     }
 
     public void ReanudarTodo()
@@ -535,6 +530,16 @@ public sealed partial class Cola : Observable
         int desde = Elementos.IndexOf(e), hasta = Elementos.IndexOf(destino);
         if (e == destino || desde < 0 || hasta < 0) return;
         Elementos.Move(desde, hasta);
+    }
+
+    // Moves a row one place up (-1) or down (+1), from the keyboard (Alt+Up, Alt+Down) or the row's menu. Returns
+    // false at either end of the list.
+    public bool Desplazar(Elemento e, int paso)
+    {
+        int desde = Elementos.IndexOf(e), hasta = desde + paso;
+        if (desde < 0 || hasta < 0 || hasta >= Elementos.Count) return false;
+        Elementos.Move(desde, hasta);
+        return true;
     }
 
     public void LimpiarTerminados()
@@ -585,12 +590,6 @@ public sealed partial class Cola : Observable
         if (eraActual) Siguiente();
     }
 
-    // yt-dlp starts ffmpeg as a child process, so the whole tree is stopped.
-    private static void Matar(Process p)
-    {
-        try { p.Kill(entireProcessTree: true); } catch { /* already finished */ }
-    }
-
     // ---- Downloads ----
 
     // Processes the queue serially: the next download starts when the previous one ends.
@@ -608,7 +607,7 @@ public sealed partial class Cola : Observable
         catch (Exception ex)
         {
             actual = null;
-            e.Fallar(tr("No se pudo crear la carpeta: ", "Could not create the folder: ") + ex.Message);
+            e.Fallar(T("FolderNotCreated", ex.Message));
             Siguiente();
             return;
         }
@@ -621,7 +620,6 @@ public sealed partial class Cola : Observable
         //   ARCHIVO  final path, after merging or converting (-O after_move)
         var args = Formatos.Argumentos(e.Formato).Concat(new[]
         {
-            "--plugin-dirs", Herramientas.RutaComplementos,
             "--newline", "--color", "no_color", "--no-playlist", "--encoding", "utf-8",
             "-o", plantilla,
             "--match-filters", Filtro.Expresion(instrumentales || e.Forzar),
@@ -636,36 +634,40 @@ public sealed partial class Cola : Observable
         args.Add("--");
         args.Add(e.Enlace);
 
-        var p = new Process { StartInfo = Herramientas.Preparar(args, e.Destino), EnableRaisingEvents = true };
-        p.OutputDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => e.Procesar(d.Data)); };
-        p.ErrorDataReceived += (_, d) => { if (d.Data != null) ui.BeginInvoke(() => e.Procesar(d.Data)); };
-        p.Exited += (_, _) => ui.BeginInvoke(() => Terminar(e, p));
+        var p = new ProcesoVigilado(Herramientas.Preparar(args, e.Destino), linea => ui.BeginInvoke(() => e.Procesar(linea)));
 
         e.Etapa = Etapa.Preparando;
         actual = e;
         try
         {
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
+            p.Iniciar();
             proceso = p;
         }
         catch (Exception ex)
         {
+            p.Dispose();
             actual = null;
-            e.Fallar(tr("No se pudo arrancar yt-dlp: ", "Could not start yt-dlp: ") + ex.Message);
+            e.Fallar(T("YtDlpNotStarted", ex.Message));
             Siguiente();
+            Refrescar();
+            return;
         }
         Refrescar();
+        Esperar(e, p);
     }
 
-    private void Terminar(Elemento e, Process p)
+    // The end of a download is awaited off the UI thread (ProcesoVigilado), so a process left behind holding the
+    // output open can no longer freeze the window.
+    private async void Esperar(Elemento e, ProcesoVigilado p)
     {
-        if (cerrada) { p.Dispose(); return; }
-        // Exited can fire before the last output lines are delivered; waiting drains them.
-        p.WaitForExit();
-        int codigo = p.ExitCode;
+        var (codigo, _) = await p.EsperarAsync();
+        await ui.InvokeAsync(() => Terminar(e, p, codigo));
+    }
+
+    private void Terminar(Elemento e, ProcesoVigilado p, int codigo)
+    {
         p.Dispose();
+        if (cerrada) return;
         // Lines still queued on the dispatcher are processed before deciding the result.
         ui.BeginInvoke(DispatcherPriority.Background, () =>
         {
@@ -690,8 +692,7 @@ public sealed partial class Cola : Observable
             else if (codigo == 0 && e.Archivo == null && e.Instrumental && !instrumentales && !e.Forzar) e.Etapa = Etapa.Pausada;
             else if (codigo == 0 && e.Fallo == "") { e.Terminar(); e.BorrarIntermedios(); Despedir(e); }
             else if (e.Etapa != Etapa.Fallo)
-                e.Fallar(e.Fallo != "" ? e.Fallo
-                    : tr($"yt-dlp terminó con el código {codigo}.", $"yt-dlp exited with code {codigo}."));
+                e.Fallar(e.Fallo != "" ? e.Fallo : T("ExitCode", codigo));
             Siguiente();
         });
     }
@@ -707,34 +708,38 @@ public sealed partial class Cola : Observable
         fila.FijarInfo(null, null, null, null);
         fila.Etapa = Etapa.Leyendo;
 
-        var args = new List<string> { "--plugin-dirs", Herramientas.RutaComplementos,
-                                      "--flat-playlist", "--yes-playlist", "-J", "--no-warnings", "--encoding", "utf-8",
+        var args = new List<string> { "--flat-playlist", "--yes-playlist", "-J", "--no-warnings", "--encoding", "utf-8",
                                       "--", fila.Enlace };
-        var p = new Process { StartInfo = Herramientas.Preparar(args), EnableRaisingEvents = true };
         var salida = new StringBuilder();
         var error = new StringBuilder();
-        p.OutputDataReceived += (_, d) => { if (d.Data != null) lock (salida) salida.Append(d.Data).Append('\n'); };
-        p.ErrorDataReceived += (_, d) => { if (d.Data != null) lock (error) error.Append(d.Data).Append('\n'); };
-        p.Exited += (_, _) =>
-        {
-            p.WaitForExit();
-            int codigo = p.ExitCode;
-            p.Dispose();
-            ui.BeginInvoke(() => Leida(fila, codigo, salida.ToString(), error.ToString()));
-        };
+        var p = new ProcesoVigilado(Herramientas.Preparar(args),
+                                    linea => { lock (salida) salida.Append(linea).Append('\n'); },
+                                    linea => { lock (error) error.Append(linea).Append('\n'); });
 
         try
         {
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
+            p.Iniciar();
             lecturas[fila] = p;
         }
         catch (Exception ex)
         {
-            fila.Fallar(tr("No se pudo arrancar yt-dlp: ", "Could not start yt-dlp: ") + ex.Message);
+            p.Dispose();
+            fila.Fallar(T("YtDlpNotStarted", ex.Message));
+            Refrescar();
+            return;
         }
         Refrescar();
+        EsperarLectura(fila, p, salida, error);
+    }
+
+    private async void EsperarLectura(Elemento fila, ProcesoVigilado p, StringBuilder salida, StringBuilder error)
+    {
+        var (codigo, _) = await p.EsperarAsync();
+        p.Dispose();
+        string json, errores;
+        lock (salida) json = salida.ToString();
+        lock (error) errores = error.ToString();
+        await ui.InvokeAsync(() => Leida(fila, codigo, json, errores));
     }
 
     private void Leida(Elemento fila, int codigo, string json, string error)
@@ -751,7 +756,7 @@ public sealed partial class Cola : Observable
                 return;
             }
             var linea = error.Split('\n').LastOrDefault(l => l.StartsWith("ERROR:"));
-            fila.Fallar(linea != null ? Errores.Mensaje(linea) : tr($"yt-dlp terminó con el código {codigo}.", $"yt-dlp exited with code {codigo}."));
+            fila.Fallar(linea != null ? Errores.Mensaje(linea) : T("ExitCode", codigo));
             Refrescar();
             return;
         }
@@ -788,16 +793,18 @@ public sealed partial class Cola : Observable
                 videos.Add((enlace, Cadena(v, "title"), Cadena(v, "channel") ?? Cadena(v, "uploader"), dur, mini));
             }
         }
-        catch (JsonException ex)
+        // InvalidOperationException: a field of an unexpected kind (an "entries" that is not a list, for example);
+        // left unhandled it would close Haul.
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
-            fila.Fallar(tr("No se pudo leer la lista: ", "Could not read the playlist: ") + ex.Message);
+            fila.Fallar(T("PlaylistNotRead", ex.Message));
             Refrescar();
             return;
         }
 
         if (videos.Count == 0)
         {
-            fila.Fallar(tr("La lista está vacía.", "The playlist is empty."));
+            fila.Fallar(T("PlaylistEmpty"));
             Refrescar();
             return;
         }
@@ -823,7 +830,7 @@ public sealed partial class Cola : Observable
             var e = new Elemento(enlace, fila.Formato, carpeta)
             {
                 Prefijo = (i + 1).ToString().PadLeft(ancho, '0'),
-                NombreLista = string.IsNullOrWhiteSpace(nombre) ? tr("Lista", "Playlist") : nombre,
+                NombreLista = string.IsNullOrWhiteSpace(nombre) ? T("Playlist") : nombre,
                 Posicion = $"{i + 1}/{videos.Count}",
             };
             e.FijarInfo(titulo, autor, duracion, miniatura);
@@ -844,8 +851,12 @@ public sealed partial class Cola : Observable
         var invalidos = Path.GetInvalidFileNameChars();
         var t = new string(titulo.Select(c => invalidos.Contains(c) ? '_' : c).ToArray()).Trim().TrimEnd('.', ' ');
         if (t.Length > 120) t = t[..120].TrimEnd('.', ' ');
-        string[] reservados = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3"];
-        if (t.Length == 0 || reservados.Contains(t.ToUpperInvariant())) t = tr("Lista", "Playlist") + (t.Length > 0 ? " " + t : "");
+        // Device names are reserved with any extension too ("NUL.txt", "COM1.mix"), so only the part before the
+        // first dot counts.
+        string[] reservados = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                               "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+        var raizNombre = t.Split('.')[0].TrimEnd(' ').ToUpperInvariant();
+        if (t.Length == 0 || reservados.Contains(raizNombre)) t = T("Playlist") + (t.Length > 0 ? " " + t : "");
         return t;
     }
 

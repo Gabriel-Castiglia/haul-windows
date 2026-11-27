@@ -13,11 +13,13 @@
 
 namespace Haul;
 
-public enum UiLanguage { En, Es }
+public enum UiLanguage { En, Es, Ja }
 
 /// <summary>
-/// Interface language. English is the default on first launch; the choice is stored in the configuration.
-/// Every visible text goes through <see cref="tr"/>, which receives both versions side by side.
+/// Interface language of the setup window. It starts as the language of an installed Haul, or Spanish or Japanese on
+/// a Windows in that language, or English (SetupApplication.InitialLanguage); the choice goes to the MSI, which
+/// stores it for the app. Every visible text goes through <see cref="T(string)"/>, which reads it from the table of
+/// the current language (Setup.SetupTexts).
 /// </summary>
 internal static class Loc
 {
@@ -37,13 +39,22 @@ internal static class Loc
         }
     }
 
-    /// <summary>Configuration code of a language ("en" or "es").</summary>
-    public static string Code(UiLanguage l) => l == UiLanguage.Es ? "es" : "en";
+    /// <summary>Configuration code of a language ("en", "es" or "ja").</summary>
+    public static string Code(UiLanguage l) => l == UiLanguage.Es ? "es" : l == UiLanguage.Ja ? "ja" : "en";
 
     /// <summary>Language for a configuration code; anything unknown means English.</summary>
     public static UiLanguage FromCode(string code) =>
-        string.Equals(code, "es", StringComparison.OrdinalIgnoreCase) ? UiLanguage.Es : UiLanguage.En;
+        string.Equals(code, "es", StringComparison.OrdinalIgnoreCase) ? UiLanguage.Es
+        : string.Equals(code, "ja", StringComparison.OrdinalIgnoreCase) ? UiLanguage.Ja : UiLanguage.En;
 
-    /// <summary>Returns the text for the current interface language.</summary>
-    public static string tr(string es, string en) => current == UiLanguage.Es ? es : en;
+    private static IReadOnlyDictionary<string, string> Table =>
+        current == UiLanguage.Es ? Setup.SetupTexts.Es : current == UiLanguage.Ja ? Setup.SetupTexts.Ja : Setup.SetupTexts.En;
+
+    /// <summary>Returns the text for the current interface language; a missing key falls back to English.</summary>
+    public static string T(string key) =>
+        Table.TryGetValue(key, out var t) || Setup.SetupTexts.En.TryGetValue(key, out t) ? t : key;
+
+    /// <summary>The same, with "{0}", "{1}"… filled in.</summary>
+    public static string T(string key, params object[] values) =>
+        string.Format(System.Globalization.CultureInfo.InvariantCulture, T(key), values);
 }
